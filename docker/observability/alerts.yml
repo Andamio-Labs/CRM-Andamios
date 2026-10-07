@@ -1,0 +1,36 @@
+# E15-S03 — Alertas de errores y latencia, versionadas como código.
+# En local se ven en http://localhost:9090/alerts. En la nube se conectan a Alertmanager / PagerDuty.
+groups:
+  - name: beecrm-api
+    rules:
+      - alert: ApiCaida
+        expr: max(up{job="beecrm-api"}) == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: La API no responde a Prometheus hace 2 minutos.
+
+      - alert: TasaDeErrores5xxAlta
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m]))
+            / clamp_min(sum(rate(http_requests_total[5m])), 1e-9) > 0.05
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: Más del 5% de las requests terminan en 5xx.
+
+      - alert: LatenciaP95Alta
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(http_request_duration_seconds_bucket{route!="unmatched"}[5m]))) > 1
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: El p95 de latencia supera 1 s durante 10 minutos.
+
+      - alert: LoginsFallidosEnRafaga
+        expr: sum(rate(http_requests_total{route="/api/auth/*", status="401"}[5m])) * 60 > 30
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: Más de 30 logins fallidos por minuto (posible ataque de fuerza bruta).

@@ -1,0 +1,121 @@
+name: beecrm
+
+x-node-dev: &node-dev
+  build:
+    context: .
+    dockerfile: docker/node.Dockerfile
+  working_dir: /app
+  volumes:
+    - .:/app
+    - node_modules:/app/node_modules
+    - api_node_modules:/app/apps/api/node_modules
+    - web_node_modules:/app/apps/web/node_modules
+    - pnpm_store:/pnpm/store
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: beecrm
+      POSTGRES_USER: beecrm_owner
+      POSTGRES_PASSWORD: beecrm_owner
+    ports: ["5442:5432"]
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U beecrm_owner -d beecrm"]
+      interval: 3s
+      retries: 20
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    ports: ["6380:6379"]
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 3s
+      retries: 20
+
+  # Bandeja de correo local: todo email (verificación, recupero) cae acá → http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:latest
+    ports: ["1025:1025", "8025:8025"]
+
+  # Instala dependencias una sola vez, para que api y web no se pisen.
+  deps:
+    <<: *node-dev
+    command: pnpm install --frozen-lockfile
+
+  api:
+    <<: *node-dev
+    command: sh -c "pnpm --filter @beecrm/api db:migrate && pnpm --filter @beecrm/api dev"
+    environment:
+      DATABASE_URL: postgres://beecrm_app:beecrm_app@postgres:5432/beecrm
+      DATABASE_OWNER_URL: postgres://beecrm_owner:beecrm_owner@postgres:5432/beecrm
+      REDIS_URL: redis://valkey:6379
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+    ports: ["3000:3000"]
+    depends_on:
+      deps: { condition: service_completed_successfully }
+      postgres: { condition: service_healthy }
+      valkey: { condition: service_healthy }
+      mailpit: { condition: service_started }
+
+  web:
+    <<: *node-dev
+    command: pnpm --filter @beecrm/web dev --host 0.0.0.0
+    environment:
+      API_PROXY_TARGET: http://api:3000
+    ports: ["5173:5173"]
+    depends_on:
+      deps: { condition: service_completed_successfully }
+
+  # E15-S04 Backup cifrado diario con retención de 30 días → ./backups (ignorado por git).
+  # Restaurar: docker compose exec backup /scripts/restore.sh /backups/<archivo> beecrm_restore
+  backup:
+    image: pgvector/pgvector:pg17
+    entrypoint: ["/scripts/schedule.sh"]
+    environment:
+      PGHOST: postgres
+      PGUSER: beecrm_owner
+      PGPASSWORD: beecrm_owner
+      PGDATABASE: beecrm
+      BACKUP_DIR: /backups
+      RETENTION_DAYS: "30"
+      # SOLO DESARROLLO. En la nube sale del gestor de secretos.
+      BACKUP_PASSPHRASE: dev-only-backup-passphrase
+    volumes:
+      - ./docker/backup:/scripts:ro
+      - ./backups:/backups
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  # ── E15-S03 Observabilidad local: docker compose --profile observability up ──
+  prometheus:
+    image: prom/prometheus:latest
+    profiles: [observability]
+    ports: ["9090:9090"]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    volumes:
+      - ./docker/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/observability/alerts.yml:/etc/prometheus/alerts.yml:ro
+
+  grafana:
+    image: grafana/grafana:latest
+    profiles: [observability]
+    ports: ["3001:3000"]
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+    volumes:
+      - ./docker/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on: [prometheus]
+
+volumes:
+  pg_data:
+  node_modules:
+  api_node_modules:
+  web_node_modules:
+  pnpm_store:

@@ -1,0 +1,223 @@
+---
+import '../styles/global.css';
+
+const configuredAppUrl = import.meta.env.PUBLIC_APP_URL ?? 'http://localhost:5173';
+const appUrl = configuredAppUrl.replace(/\/$/, '');
+const appLink = (path: string) => `${appUrl}${path}`;
+
+const capabilities = [
+  {
+    title: 'Embudo que se entiende',
+    body: 'Ordená negocios por etapa, movelos con claridad y encontrá qué necesita atención.',
+    status: 'Base del CRM'
+  },
+  {
+    title: 'Contactos con contexto',
+    body: 'Centralizá datos, notas y actividad para que la relación no dependa de una sola persona.',
+    status: 'Alcance del producto'
+  },
+  {
+    title: 'Tareas junto al negocio',
+    body: 'Convertí una conversación o una oportunidad en un próximo paso concreto.',
+    status: 'Alcance del producto'
+  },
+  {
+    title: 'Bandeja preparada para canales',
+    body: 'El producto se orienta a reunir conversaciones y leads en un mismo espacio.',
+    status: 'Conexión según disponibilidad'
+  }
+];
+
+const features = [
+  ['Contactos y organizaciones', 'Una base para consultar, buscar y cuidar cada relación.'],
+  ['Negocios y etapas', 'Un lugar visible para entender el avance de cada oportunidad.'],
+  ['Tareas y recordatorios', 'Seguimiento asociado al contexto, no perdido en una lista aparte.'],
+  ['Analítica del embudo', 'La información necesaria para revisar actividad y conversión cuando esté disponible.'],
+  ['Automatizaciones', 'Reglas para reducir tareas repetitivas, presentadas como parte del desarrollo del producto.'],
+  ['Accesos por equipo', 'Roles y permisos para que cada persona trabaje con el contexto que corresponde.']
+];
+
+const audiences = [
+  ['Equipos comerciales', 'Cuando hay oportunidades abiertas y nadie debería perder el próximo paso.'],
+  ['Servicios y ventas consultivas', 'Cuando la conversación es parte central de la decisión de compra.'],
+  ['Pequeñas y medianas empresas', 'Cuando se necesita orden sin adoptar una suite que no encaja con el equipo.']
+];
+
+const integrations = [
+  ['WhatsApp', 'Canal prioritario del alcance omnicanal.'],
+  ['Instagram', 'Conexión prevista para reunir conversaciones comerciales.'],
+  ['Telegram', 'Canal contemplado dentro de la expansión omnicanal.'],
+  ['Meta', 'Captura y atribución de leads prevista en el alcance.'],
+  ['API y webhooks', 'Base para conectar procesos propios cuando esté disponible.']
+];
+---
+
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="description" content="BeeCRM ordena contactos, negocios y próximos pasos en un solo lugar." />
+    <title>BeeCRM | Ordená cada oportunidad</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#contenido">Ir al contenido</a>
+    <header class="site-header">
+      <nav class="nav shell" aria-label="Navegación principal">
+        <a class="brand" href="#inicio" aria-label="BeeCRM, inicio">
+          <span class="brand-mark" aria-hidden="true">b</span>
+          <span>bee<span>crm</span></span>
+        </a>
+        <div class="nav-links">
+          <a href="#solucion">Solución</a>
+          <a href="#funcionalidades">Funcionalidades</a>
+          <a href="#integraciones">Integraciones</a>
+          <a href="#precios">Precios</a>
+          <a href="#faq">FAQ</a>
+        </div>
+        <div class="nav-actions">
+          <a class="text-link" href={appLink('/login')}>Ingresar</a>
+          <a class="button button-small" href={appLink('/register')}>Crear cuenta</a>
+        </div>
+      </nav>
+    </header>
+
+    <main id="contenido">
+      <section class="hero shell" id="inicio">
+        <div class="hero-copy">
+          <p class="eyebrow">CRM para equipos que venden conversando</p>
+          <h1>Menos conversaciones perdidas. Más próximos pasos claros.</h1>
+          <p class="hero-lede">BeeCRM reúne contactos, negocios y seguimiento para que tu equipo pueda trabajar con contexto y avanzar sin depender de planillas sueltas.</p>
+          <div class="hero-actions">
+            <a class="button" href={appLink('/register')}>Crear mi cuenta</a>
+            <a class="button button-quiet" href="#preview">Ver cómo se organiza</a>
+          </div>
+          <p class="microcopy">Acceso al CRM en <code>{appUrl}</code></p>
+        </div>
+        <div class="hero-aside" aria-label="Resumen de la propuesta">
+          <div class="aside-line"><span class="line-dot"></span><span>Una vista para decidir qué sigue</span></div>
+          <div class="aside-line"><span class="line-dot"></span><span>Un contexto compartido para el equipo</span></div>
+          <div class="aside-line"><span class="line-dot"></span><span>Una base para crecer sin perder orden</span></div>
+        </div>
+      </section>
+
+      <section class="section section-dark" id="problema">
+        <div class="shell split-heading">
+          <p class="eyebrow eyebrow-light">El problema</p>
+          <div>
+            <h2>Cuando el seguimiento vive en demasiados lugares, el negocio queda a merced de la memoria.</h2>
+            <p class="section-lede">Un CRM tiene que ayudar a responder una pregunta concreta: ¿qué necesita atención ahora?</p>
+          </div>
+        </div>
+        <div class="shell problem-grid">
+          <article class="problem-card"><span class="card-index">A</span><h3>Chats sin contexto</h3><p>La conversación avanza, pero el resto del equipo no sabe qué se acordó ni cuál es el siguiente paso.</p></article>
+          <article class="problem-card"><span class="card-index">B</span><h3>Oportunidades invisibles</h3><p>Sin una vista del embudo, los negocios se enfrían antes de que alguien pueda actuar.</p></article>
+          <article class="problem-card"><span class="card-index">C</span><h3>Tareas que se dispersan</h3><p>Un recordatorio aislado no alcanza cuando necesita estar vinculado a un contacto o negocio.</p></article>
+        </div>
+      </section>
+
+      <section class="section" id="solucion">
+        <div class="shell section-intro">
+          <p class="eyebrow">La solución</p>
+          <h2>Un espacio de trabajo sobrio para vender con seguimiento.</h2>
+          <p class="section-lede">La propuesta de BeeCRM parte de una base simple: cada contacto, negocio y tarea debe aportar a la próxima decisión.</p>
+        </div>
+        <div class="shell capability-list">
+          {capabilities.map((capability, index) => (
+            <article class:list={['capability', { 'capability-featured': index === 0 }]}>
+              <span class="capability-status">{capability.status}</span>
+              <h3>{capability.title}</h3>
+              <p>{capability.body}</p>
+              <span class="capability-number">0{index + 1}</span>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section class="section section-soft" id="preview">
+        <div class="shell preview-layout">
+          <div class="preview-copy">
+            <p class="eyebrow">Vista del producto</p>
+            <h2>La información importante, cerca de la acción.</h2>
+            <p class="section-lede">Esta es una representación conceptual de cómo se ordena el trabajo. No es una captura ni promete un estado de interfaz que no esté confirmado.</p>
+            <a class="inline-link" href={appLink('/deals')}>Abrir el embudo del CRM</a>
+          </div>
+          <div class="product-preview" aria-label="Vista conceptual de un embudo de negocios">
+            <div class="preview-topbar"><span class="preview-title">Embudo de ventas</span><span class="preview-filter">Vista: Kanban</span></div>
+            <div class="preview-columns">
+              <div class="preview-column"><div class="column-heading"><span>Nuevo</span><strong>--</strong></div><div class="deal-card"><b>Consulta pendiente</b><span>Próximo paso por definir</span></div></div>
+              <div class="preview-column"><div class="column-heading"><span>En conversación</span><strong>--</strong></div><div class="deal-card deal-card-accent"><b>Oportunidad activa</b><span>Tarea vinculada</span></div></div>
+              <div class="preview-column"><div class="column-heading"><span>Próximo paso</span><strong>--</strong></div><div class="empty-deal">Todavía no hay negocios acá</div></div>
+            </div>
+            <p class="preview-note">Preview conceptual, sin datos reales</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="funcionalidades">
+        <div class="shell section-intro row-intro">
+          <div><p class="eyebrow">Funcionalidades</p><h2>Lo esencial para que el equipo avance.</h2></div>
+          <p class="section-lede">El alcance combina lo que ya forma parte de la base del CRM con capacidades que se incorporan por etapas.</p>
+        </div>
+        <div class="shell feature-list">
+          {features.map(([title, body], index) => (
+            <article class="feature-row"><span class="feature-mark">{index < 4 ? 'Incluido' : 'En desarrollo'}</span><h3>{title}</h3><p>{body}</p></article>
+          ))}
+        </div>
+      </section>
+
+      <section class="section section-dark" id="integraciones">
+        <div class="shell integrations-layout">
+          <div><p class="eyebrow eyebrow-light">Integraciones</p><h2>Conectá el CRM con el flujo que ya existe.</h2><p class="section-lede">Las conexiones se presentan según el alcance documentado. La disponibilidad depende de la implementación y configuración del entorno.</p></div>
+          <div class="integration-list">
+            {integrations.map(([name, body]) => <div class="integration-row"><span class="integration-symbol" aria-hidden="true">+</span><div><h3>{name}</h3><p>{body}</p></div></div>)}
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="audiencia">
+        <div class="shell audience-layout">
+          <div class="audience-title"><p class="eyebrow">Para quién</p><h2>Para equipos que necesitan orden, no más ruido.</h2></div>
+          <div class="audience-list">{audiences.map(([title, body]) => <article><h3>{title}</h3><p>{body}</p></article>)}</div>
+        </div>
+      </section>
+
+      <section class="section section-soft" id="comparativa">
+        <div class="shell comparison-layout">
+          <div><p class="eyebrow">Comparativa</p><h2>Antes de elegir, mirá el trabajo real.</h2><p class="section-lede">No comparamos proveedores ni publicamos atributos que todavía no fueron validados. Esta matriz ayuda a revisar el encaje del flujo.</p></div>
+          <div class="comparison-table" role="table" aria-label="Matriz de encaje del flujo">
+            <div class="comparison-row comparison-header" role="row"><span>Necesidad</span><span>Cómo la aborda BeeCRM</span><span>Estado</span></div>
+            <div class="comparison-row" role="row"><span>Ver el avance</span><span>Embudo con etapas y negocios</span><strong>Base</strong></div>
+            <div class="comparison-row" role="row"><span>Recordar qué sigue</span><span>Tareas vinculadas al contexto</span><strong>Alcance</strong></div>
+            <div class="comparison-row" role="row"><span>Reunir canales</span><span>Bandeja orientada a conversaciones</span><strong>Según conexión</strong></div>
+            <div class="comparison-row" role="row"><span>Automatizar</span><span>Reglas para próximos pasos</span><strong>En desarrollo</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="precios">
+        <div class="shell pricing-layout">
+          <div><p class="eyebrow">Precios</p><h2>La propuesta comercial todavía se está definiendo.</h2><p class="section-lede">Preferimos no publicar precios, límites o condiciones sin una decisión confirmada. Podés crear una cuenta o entrar al CRM mientras esa información toma forma.</p></div>
+          <div class="pricing-placeholder"><span class="placeholder-label">Precio público</span><strong>Por definir</strong><p>Sin cifras inventadas. Esta sección se actualizará cuando el modelo comercial esté validado.</p><a class="button button-small" href={appLink('/register')}>Crear una cuenta</a></div>
+        </div>
+      </section>
+
+      <section class="section section-soft" id="faq">
+        <div class="shell faq-layout">
+          <div><p class="eyebrow">Preguntas frecuentes</p><h2>Lo que podemos decir hoy, sin vueltas.</h2></div>
+          <div class="faq-list">
+            <details><summary>¿Dónde entro al CRM?</summary><p>Desde los botones de acceso de esta página. Ingresar abre <a href={appLink('/login')}>/login</a> y crear una cuenta abre <a href={appLink('/register')}>/register</a>.</p></details>
+            <details><summary>¿Puedo revisar el embudo sin pasar por la landing?</summary><p>Sí. El acceso directo al espacio de negocios apunta a <a href={appLink('/deals')}>/deals</a>. El resultado depende de que tu sesión y tu entorno estén configurados.</p></details>
+            <details><summary>¿Las integraciones ya están todas activas?</summary><p>No publicamos esa afirmación. La disponibilidad depende de cada conexión y del estado de implementación del producto.</p></details>
+            <details><summary>¿Dónde consulto las condiciones comerciales?</summary><p>La información de precios y planes aún no está confirmada públicamente, por eso la sección de precios queda marcada como pendiente.</p></details>
+          </div>
+        </div>
+      </section>
+
+      <section class="section cta-section">
+        <div class="shell cta-card"><div><p class="eyebrow">Siguiente paso</p><h2>Probá el espacio donde las oportunidades toman forma.</h2></div><div class="cta-actions"><a class="button" href={appLink('/register')}>Crear mi cuenta</a><a class="button button-dark" href={appLink('/deals')}>Ir a negocios</a></div></div>
+      </section>
+    </main>
+
+    <footer class="site-footer"><div class="shell footer-inner"><a class="brand" href="#inicio"><span class="brand-mark" aria-hidden="true">b</span><span>bee<span>crm</span></span></a><p>CRM para ordenar conversaciones, negocios y próximos pasos.</p><div class="footer-links"><a href="#solucion">Solución</a><a href="#funcionalidades">Funcionalidades</a><a href={appLink('/login')}>Ingresar</a></div></div></footer>
+  </body>
+</html>

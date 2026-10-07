@@ -1,0 +1,16 @@
+{
+  "name": "@beecrm/landing",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "check": "astro-check"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@astrojs/language-server": "2.15.0",
+    "astro": "^5.16.0",
+    "typescript": "~6.0.3"
+  }
+}

@@ -1,0 +1,28 @@
+# E15-S02 — CI: tipos + tests unitarios + integración + aislamiento entre tenants.
+# Sin deploy: el proyecto es local-first hasta tener un avance grande (ver TASKS.md).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      # Los tests de la API levantan Postgres real con Testcontainers (Docker viene en el runner).
+      - run: pnpm test
