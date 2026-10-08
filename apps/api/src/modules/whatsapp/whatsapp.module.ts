@@ -1,6 +1,6 @@
 import { AuditView } from '../../shared/http/audit.js';
 import {
-  Controller, Delete, ForbiddenException, Get, HttpCode, HttpStatus, Inject, Module, Param, Patch, Post, Query, type RawBodyRequest,
+  Controller, Delete, ForbiddenException, Get, HttpCode, HttpStatus, Inject, Module, Param, Patch, Post, Put, Query, type RawBodyRequest,
   Req, UnauthorizedException, UseGuards,
 } from '@nestjs/common';
 import { createHash } from 'node:crypto';
@@ -14,12 +14,13 @@ import { ATTEMPT_STORE, ENV, JOB_QUEUE, WHATSAPP_API } from '../../shared/tokens
 import type { AttemptStore } from '../identity/domain/login-throttle.js';
 import { IdentityModule } from '../identity/identity.module.js';
 import { type AuthContext, CurrentAuth, PermissionGuard, RequirePermission, SessionGuard } from '../identity/infrastructure/http/session.guard.js';
+import { AiModule } from '../ai/ai.module.js';
 import { BillingModule } from '../billing/plan.service.js';
 import { TenancyModule } from '../tenancy/tenancy.module.js';
 import { ChannelsService, connectSchema } from './application/channels.service.js';
 import { InboundService } from './application/inbound.service.js';
 import { MediaController, type MediaJob, MediaService } from './application/media.service.js';
-import { assignSchema, listConversationsSchema, MessagingService, type SendJob, sendMessageSchema } from './application/messaging.service.js';
+import { aiPauseSchema, assignSchema, listConversationsSchema, MessagingService, type SendJob, sendMessageSchema } from './application/messaging.service.js';
 import { createTemplateSchema, QuickRepliesService, quickReplySchema, TemplatesService } from './application/templates.service.js';
 import { PhoneThrottle } from './domain/phone-throttle.js';
 import { verifyMetaSignature } from './domain/webhook-signature.js';
@@ -85,6 +86,9 @@ class WhatsAppController {
   @Patch('conversations/:id/assignment') @RequirePermission('records:write')
   assign(@CurrentAuth() auth: AuthContext, @Param('id') id: string, @ZodBody(assignSchema) body: z.infer<typeof assignSchema>) { return this.messaging.assign(auth, id, body); }
 
+  @Put('conversations/:id/ai') @RequirePermission('records:write')
+  setAiPause(@CurrentAuth() auth: AuthContext, @Param('id') id: string, @ZodBody(aiPauseSchema) body: z.infer<typeof aiPauseSchema>) { return this.messaging.setAiPause(auth, id, body); }
+
   @Get('whatsapp/templates') @RequirePermission('records:read')
   templates(@CurrentAuth() auth: AuthContext) { return this.templatesService.list(auth); }
 
@@ -117,7 +121,7 @@ class WhatsAppController {
 
 /** E04 — Bandeja WhatsApp. Registra sus handlers de cola al iniciar. */
 @Module({
-  imports: [IdentityModule, TenancyModule, BillingModule],
+  imports: [IdentityModule, TenancyModule, BillingModule, AiModule],
   exports: [MessagingService],
   controllers: [WhatsAppWebhookController, WhatsAppController, MediaController],
   providers: [

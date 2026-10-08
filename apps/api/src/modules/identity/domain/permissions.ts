@@ -26,6 +26,7 @@ const MATRIX = {
   'data:export': { owner: true, admin: false, member: false, label: 'Exportar datos (CSV)' },
   'privacy:manage': { owner: true, admin: true, member: false, label: 'Atender derechos del titular (consulta, exportación, supresión)' },
   'audit:read': { owner: true, admin: false, member: false, label: 'Ver registro de auditoría' },
+  'ai:logs': { owner: true, admin: false, member: false, label: 'Ver el registro de conversaciones del agente de IA (prompts, tokens y costo)' },
   'billing:manage': { owner: true, admin: false, member: false, label: 'Gestionar plan y pagos' },
   'tenant:delete': { owner: true, admin: false, member: false, label: 'Eliminar la empresa y sus datos' },
 } as const satisfies Record<string, Record<Role, boolean> & { label: string }>;

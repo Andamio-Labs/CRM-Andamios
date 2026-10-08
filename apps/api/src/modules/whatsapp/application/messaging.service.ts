@@ -13,6 +13,7 @@ import { DB, JOB_QUEUE, WHATSAPP_API } from '../../../shared/tokens.js';
 import type { AuthContext } from '../../identity/infrastructure/http/session.guard.js';
 import { TenantContext } from '../../tenancy/application/tenant-context.js';
 import { TenantSecrets } from '../../tenancy/infrastructure/tenant-secrets.js';
+import { HUMAN_REPLY_PAUSE_HOURS, INDEFINITE_PAUSE } from '../../ai/domain/handoff.js';
 import { classifyMetaError } from '../domain/meta-errors.js';
 import { PhoneThrottle, ThrottledError } from '../domain/phone-throttle.js';
 import { countVariables, renderTemplate, templateComponents } from '../domain/templates.js';
@@ -39,6 +40,7 @@ export const listConversationsSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 export const assignSchema = z.object({ userId: z.string().max(64).nullable() }).strict();
+export const aiPauseSchema = z.object({ paused: z.boolean() }).strict();
 
 /** Job de la cola `outbound`: solo ids; el contenido se lee de la base al procesar. */
 export interface SendJob {
@@ -116,10 +118,21 @@ export class MessagingService {
     return this.tenant.run(auth, async (tx) => withWindow(await this.findVisible(tx, auth, id)));
   }
 
+  /** E05-S05 — Pausar (hasta reanudar) o reanudar la IA en una conversación. Cualquiera que la vea. */
+  setAiPause(auth: AuthContext, id: string, { paused }: z.infer<typeof aiPauseSchema>) {
+    return this.tenant.run(auth, async (tx) => {
+      const conversation = await this.findVisible(tx, auth, id);
+      const changes = paused ? { aiPausedUntil: INDEFINITE_PAUSE, aiPauseReason: 'manual' as const } : { aiPausedUntil: null, aiPauseReason: null };
+      await tx.update(conversations).set(changes).where(eq(conversations.id, id));
+      this.realtime.publish(auth.tenantId, 'conversation.updated', { conversationId: id }, null);
+      return withWindow({ ...conversation, ...changes });
+    });
+  }
+
   listMessages(auth: AuthContext, id: string) {
     return this.tenant.run(auth, async (tx) => {
       await this.findVisible(tx, auth, id);
-      const rows = await tx.select().from(messages).where(eq(messages.conversationId, id)).orderBy(desc(messages.createdAt), desc(messages.id)).limit(200);
+      const rows = await tx.select().from(messages).where(eq(messages.conversationId, id)).orderBy(desc(messages.createdAt), desc(messages.statusUpdatedAt), desc(messages.id)).limit(200);
       return rows.reverse().map(({ tenantId: _t, media, ...m }) => ({ ...m, media: this.media.present(media as StoredMedia | null) }));
     });
   }
@@ -167,8 +180,13 @@ export class MessagingService {
       const [row] = await tx.insert(messages).values({
         tenantId: auth.tenantId, conversationId: id, direction: 'out', type: payload.type, body, media: outbound, status: 'pending', sentBy: auth.userId,
       }).returning();
-      // Respondió una persona: la próxima vez fuera de horario vuelve a contestar el mensaje automático (E04-S10).
-      await tx.update(conversations).set({ lastMessageAt: sql`now()`, autoReplyAt: null }).where(eq(conversations.id, id));
+      // Respondió una persona: la próxima vez fuera de horario vuelve a contestar el mensaje automático (E04-S10)
+      // y la IA se calla 24 h en esta conversación (E05-S05). Una pausa manual no se acorta.
+      await tx.update(conversations).set({
+        lastMessageAt: sql`now()`, autoReplyAt: null,
+        aiPausedUntil: sql`CASE WHEN ${conversations.aiPauseReason} = 'manual' THEN ${conversations.aiPausedUntil} ELSE now() + make_interval(hours => ${HUMAN_REPLY_PAUSE_HOURS}) END`,
+        aiPauseReason: sql`CASE WHEN ${conversations.aiPauseReason} = 'manual' THEN 'manual' ELSE 'human_reply' END`,
+      }).where(eq(conversations.id, id));
       return row!;
     });
     await this.queue.enqueue('outbound', 'wa.send', { tenantId: auth.tenantId, messageId: message.id } satisfies SendJob, { jobId: message.id });
@@ -259,6 +277,9 @@ export class MessagingService {
       .select({
         id: conversations.id, status: conversations.status, unreadCount: conversations.unreadCount,
         lastMessageAt: conversations.lastMessageAt, lastInboundAt: conversations.lastInboundAt, assignedTo: conversations.assignedTo,
+        aiPausedUntil: conversations.aiPausedUntil, aiPauseReason: conversations.aiPauseReason,
+        // E05-S05 — Si el asistente está activo en la empresa (el vendedor no puede leer su configuración).
+        aiAgentEnabled: sql<boolean>`coalesce((SELECT enabled FROM ai_agents), false)`,
         channelId: conversations.channelId, channelStatus: whatsappChannels.status, wabaId: whatsappChannels.wabaId,
         contact: { id: contacts.id, name: contacts.name, phone: contacts.phone, ownerId: contacts.ownerId, optOutAt: contacts.whatsappOptOutAt },
       })

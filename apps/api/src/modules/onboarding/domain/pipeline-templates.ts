@@ -12,7 +12,7 @@ export type PipelineTemplateId = keyof typeof PIPELINE_TEMPLATES;
 export const PIPELINE_TEMPLATE_IDS = Object.keys(PIPELINE_TEMPLATES) as [PipelineTemplateId, ...PipelineTemplateId[]];
 
 export const ONBOARDING_STEPS = [
-  { key: 'whatsapp', label: 'Conectar tu número de WhatsApp', link: '/settings' },
+  { key: 'whatsapp', label: 'Conectar tu número de WhatsApp', link: '/settings?tab=canales' },
   { key: 'pipeline', label: 'Elegir la plantilla de tu embudo', link: '/' },
   { key: 'import', label: 'Importar tus contactos', link: '/contacts' },
   { key: 'team', label: 'Invitar a tu equipo', link: '/team' },

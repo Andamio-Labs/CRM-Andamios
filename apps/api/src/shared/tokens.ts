@@ -10,3 +10,5 @@ export const WHATSAPP_API = Symbol('WHATSAPP_API');
 export const STORAGE = Symbol('STORAGE');
 export const LLM_PROVIDER = Symbol('LLM_PROVIDER');
 export const WOMPI_API = Symbol('WOMPI_API');
+export const EMBEDDINGS_PROVIDER = Symbol('EMBEDDINGS_PROVIDER');
+export const PAGE_FETCHER = Symbol('PAGE_FETCHER');

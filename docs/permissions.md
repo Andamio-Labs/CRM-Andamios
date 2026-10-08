@@ -37,6 +37,7 @@ Tres roles por empresa (tenant). En la base, `member.role` usa los nombres de Be
 | Exportar datos (CSV) | `data:export` | ✅ | — | — |
 | Atender derechos del titular (consulta, exportación, supresión) | `privacy:manage` | ✅ | ✅ | — |
 | Ver registro de auditoría | `audit:read` | ✅ | — | — |
+| Ver el registro de conversaciones del agente de IA (prompts, tokens y costo) | `ai:logs` | ✅ | — | — |
 | Gestionar plan y pagos | `billing:manage` | ✅ | — | — |
 | Eliminar la empresa y sus datos | `tenant:delete` | ✅ | — | — |
 <!-- matriz:fin -->

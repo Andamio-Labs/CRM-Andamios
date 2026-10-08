@@ -16,7 +16,10 @@ describe('Configuración del agente (E05-S01)', () => {
 
   it('arranca con valores por defecto, apagado y sin IA configurada', async () => {
     const agent = (await team.owner.api.get('/api/v1/ai/agent').expect(200)).body;
-    expect(agent).toMatchObject({ name: 'Asistente', tone: 'friendly', language: 'es-CO', schedule: 'always', instructions: '', enabled: false, aiConfigured: false });
+    expect(agent).toMatchObject({
+      name: 'Asistente', tone: 'friendly', language: 'es-CO', schedule: 'always', instructions: '', enabled: false, aiConfigured: false, knowledgeConfigured: false,
+      handoffKeywords: ['asesor', 'humano', 'persona', 'agente'], blockOnQuota: true,
+    });
   });
 
   it('propietario y admin editan nombre, tono, idioma, horario e instrucciones; el vendedor no', async () => {
@@ -35,6 +38,13 @@ describe('Configuración del agente (E05-S01)', () => {
     await put({ schedule: 'a_veces' }).expect(400);
     await put({ instructions: 'x'.repeat(8001) }).expect(400);
     await put({ name: '' }).expect(400);
+    await put({ handoffKeywords: ['a'] }).expect(400);
+    await put({ handoffKeywords: Array.from({ length: 21 }, (_, i) => `palabra${i}`) }).expect(400);
+  });
+
+  it('las palabras de escalamiento se guardan en minúsculas y sin repetir', async () => {
+    const saved = (await team.owner.api.put('/api/v1/ai/agent', { handoffKeywords: ['Asesor', 'asesor', 'Gerente'] }).expect(200)).body;
+    expect(saved.handoffKeywords).toEqual(['asesor', 'gerente']);
   });
 
   it('no se puede activar sin un proveedor de IA configurado', async () => {
@@ -62,7 +72,7 @@ describe('Simulador con un proveedor de IA (E05-S01)', () => {
     configured: true,
     complete: async (req) => {
       calls.push(req);
-      return { text: 'Un andamio cuesta según la altura.', model: 'fake', inputTokens: 10, outputTokens: 8 };
+      return { text: '{"reply":"Un andamio cuesta según la altura.","handoff":false,"fields":{"contact.name":"Ana"}}', model: 'fake', inputTokens: 10, outputTokens: 8 };
     },
   };
   let t: TestApp;
@@ -76,8 +86,13 @@ describe('Simulador con un proveedor de IA (E05-S01)', () => {
     const { owner } = await createTeam(t, 'Agente con IA');
     await owner.api.put('/api/v1/ai/agent', { name: 'Abeja', instructions: 'Solo andamios.', enabled: true }).expect(200);
     const res = (await owner.api.post('/api/v1/ai/agent/preview', { message: 'Hola' }).expect(200)).body;
-    expect(res).toMatchObject({ reply: 'Un andamio cuesta según la altura.', aiConfigured: true });
+    expect(res).toMatchObject({ reply: 'Un andamio cuesta según la altura.', aiConfigured: true, outcome: 'replied', handoff: false, fields: { 'contact.name': 'Ana' } });
     expect(calls.at(-1)!.system).toContain('Solo andamios.');
+    expect(calls.at(-1)!.json).toBe(true);
     expect(calls.at(-1)!.messages).toEqual([{ role: 'user', content: 'Hola' }]);
+    // Queda en el registro como simulador: no cuenta para la cuota.
+    const log = (await owner.api.get('/api/v1/ai/interactions?channel=preview').expect(200)).body.items;
+    expect(log[0]).toMatchObject({ channel: 'preview', outcome: 'replied', model: 'fake' });
+    expect((await owner.api.get('/api/v1/ai/usage').expect(200)).body.used).toBe(0);
   });
 });

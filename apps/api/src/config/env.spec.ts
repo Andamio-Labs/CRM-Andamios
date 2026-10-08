@@ -39,6 +39,22 @@ describe('loadEnv en producción', () => {
     expect(() => loadEnv(withoutUrl)).toThrow(/WOMPI_URL/);
   });
 
+  it('la IA arranca apagada; con el proveedor compatible con OpenAI exige URL, modelo y llave', () => {
+    expect(loadEnv(production)).toMatchObject({ LLM_API: 'none', EMBEDDINGS_API: 'none' });
+    expect(() => loadEnv({ ...production, LLM_API: 'openai' })).toThrow(/LLM_BASE_URL/);
+    expect(() => loadEnv({ ...production, LLM_API: 'openai', LLM_BASE_URL: 'https://api.groq.com/openai/v1', LLM_MODEL: 'llama' })).toThrow(/LLM_API_KEY/);
+    expect(loadEnv({ ...production, LLM_API: 'openai', LLM_BASE_URL: 'https://api.deepseek.com', LLM_MODEL: 'deepseek-chat', LLM_API_KEY: 'sk' }))
+      .toMatchObject({ LLM_TIMEOUT_MS: 8000 });
+    // Embeddings locales (Ollama): sin llave.
+    expect(loadEnv({ ...production, EMBEDDINGS_API: 'openai', EMBEDDINGS_BASE_URL: 'http://ollama:11434/v1', EMBEDDINGS_MODEL: 'bge-m3' })).toBeTruthy();
+    expect(() => loadEnv({ ...production, EMBEDDINGS_API: 'openai' })).toThrow(/EMBEDDINGS_BASE_URL/);
+  });
+
+  it('rechaza los simuladores de IA en producción', () => {
+    expect(() => loadEnv({ ...production, LLM_API: 'local' })).toThrow(/LLM_API/);
+    expect(() => loadEnv({ ...production, EMBEDDINGS_API: 'local' })).toThrow(/EMBEDDINGS_API/);
+  });
+
   it('fuera de producción sigue usando los simuladores por defecto', () => {
     expect(loadEnv({ NODE_ENV: 'development' })).toMatchObject({ WOMPI_API: 'local', WHATSAPP_API: 'local', WOMPI_URL: 'https://sandbox.wompi.co/v1' });
   });

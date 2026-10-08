@@ -14,6 +14,7 @@ import {
   text,
   timestamp,
   uuid,
+  vector,
 } from 'drizzle-orm/pg-core';
 
 /**
@@ -240,6 +241,9 @@ export const conversations = pgTable('conversations', {
   autoReplyAt: ts('auto_reply_at'),
   noReplyAlertedAt: ts('no_reply_alerted_at'),
   firstResponseAlertedAt: ts('first_response_alerted_at'),
+  /** E05-S05 — Hasta cuándo la IA no responde en esta conversación (INDEFINITE_PAUSE = hasta reanudar a mano). */
+  aiPausedUntil: ts('ai_paused_until'),
+  aiPauseReason: text('ai_pause_reason').$type<'human_reply' | 'manual' | 'handoff' | 'guardrail'>(),
   createdAt: ts('created_at').notNull().defaultNow(),
 });
 
@@ -255,6 +259,8 @@ export const messages = pgTable('messages', {
   status: text('status').$type<'received' | 'pending' | 'sent' | 'delivered' | 'read' | 'failed' | 'internal'>().notNull(),
   error: jsonb('error'),
   sentBy: text('sent_by'),
+  /** E05-S03 — Respuesta del agente de IA (sin sent_by: no cuenta como respuesta humana). */
+  aiGenerated: boolean('ai_generated').notNull().default(false),
   createdAt: ts('created_at').notNull().defaultNow(),
   statusUpdatedAt: ts('status_updated_at').notNull().defaultNow(),
 });
@@ -354,17 +360,25 @@ export const aiAgents = pgTable('ai_agents', {
   schedule: text('schedule').$type<'always' | 'business_hours' | 'out_of_hours'>().notNull().default('always'),
   instructions: text('instructions').notNull().default(''),
   enabled: boolean('enabled').notNull().default(false),
+  /** E05-S05 */
+  handoffKeywords: text('handoff_keywords').array().notNull().default(['asesor', 'humano', 'persona', 'agente']),
+  /** E05-S04 — Destinos de los datos que captura ("contact.name", "deal.custom.altura"…). */
+  qualification: text('qualification').array().notNull().default(['contact.name', 'contact.email', 'deal.description', 'deal.value']),
+  /** E05-S06 — Al agotar la cuota: true deja de responder; false sigue (se avisa igual). */
+  blockOnQuota: boolean('block_on_quota').notNull().default(true),
   updatedBy: text('updated_by'),
   updatedAt: ts('updated_at').notNull().defaultNow(),
 });
 
-/** E05-S02 — Base de conocimiento del agente (FAQ y texto) y sus fragmentos. */
+/** E05-S02 — Base de conocimiento del agente (FAQ, texto, PDF y URL) y sus fragmentos. */
 export const knowledgeSources = pgTable('knowledge_sources', {
   id: uuid('id').primaryKey().defaultRandom(),
   tenantId: text('tenant_id').notNull(),
-  kind: text('kind').$type<'text' | 'faq'>().notNull(),
+  kind: text('kind').$type<'text' | 'faq' | 'pdf' | 'url'>().notNull(),
   title: text('title').notNull(),
   content: text('content'),
+  url: text('url'),
+  fileName: text('file_name'),
   faq: jsonb('faq').$type<{ question: string; answer: string }[]>(),
   status: text('status').$type<'waiting_ai' | 'indexing' | 'ready' | 'failed'>().notNull(),
   error: text('error'),
@@ -380,7 +394,38 @@ export const knowledgeChunks = pgTable('knowledge_chunks', {
   sourceId: uuid('source_id').notNull(),
   ordinal: integer('ordinal').notNull(),
   content: text('content').notNull(),
+  embedding: vector('embedding', { dimensions: 1024 }),
 });
+
+/** E05-S08 — Cada turno del agente: prompt, respuesta, modelo, tokens, costo y resultado. */
+export const aiInteractions = pgTable('ai_interactions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: text('tenant_id').notNull(),
+  conversationId: uuid('conversation_id'),
+  messageId: uuid('message_id'),
+  replyMessageId: uuid('reply_message_id'),
+  channel: text('channel').$type<'whatsapp' | 'preview'>().notNull(),
+  outcome: text('outcome').$type<'replied' | 'handoff' | 'blocked' | 'error' | 'quota'>().notNull(),
+  model: text('model'),
+  prompt: jsonb('prompt').$type<{ system: string; messages: { role: string; content: string }[] }>().notNull(),
+  response: text('response'),
+  inputTokens: integer('input_tokens').notNull().default(0),
+  outputTokens: integer('output_tokens').notNull().default(0),
+  costMicros: bigint('cost_micros', { mode: 'number' }).notNull().default(0),
+  latencyMs: integer('latency_ms'),
+  violations: text('violations').array().notNull().default([]),
+  captured: jsonb('captured').$type<Record<string, unknown>>().notNull().default({}),
+  sources: jsonb('sources').$type<{ sourceId: string; title: string }[]>().notNull().default([]),
+  error: text('error'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});
+
+export const aiUsageAlerts = pgTable('ai_usage_alerts', {
+  tenantId: text('tenant_id').notNull(),
+  month: date('month').notNull(),
+  threshold: integer('threshold').notNull(),
+  sentAt: ts('sent_at').notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.tenantId, t.month, t.threshold] })]);
 
 /** E10-S03 — Cada intento de cobro de la suscripción en Wompi. */
 export const billingCharges = pgTable('billing_charges', {

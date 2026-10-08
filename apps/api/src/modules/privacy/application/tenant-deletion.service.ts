@@ -17,9 +17,9 @@ const CODE_TTL_MS = 30 * 60_000;
 const MAX_ATTEMPTS = 5;
 type Failure = 'DELETION_NOT_REQUESTED' | 'DELETION_CODE_INVALID' | 'DELETION_CODE_LOCKED' | 'COMPANY_NAME_MISMATCH';
 const FAILURES: Record<Failure, [HttpStatus, string]> = {
-  DELETION_NOT_REQUESTED: [HttpStatus.NOT_FOUND, 'Primero pedí el código de eliminación'],
-  DELETION_CODE_INVALID: [HttpStatus.BAD_REQUEST, 'El código no es válido o venció; pedí uno nuevo'],
-  DELETION_CODE_LOCKED: [HttpStatus.BAD_REQUEST, 'Demasiados intentos; pedí un código nuevo'],
+  DELETION_NOT_REQUESTED: [HttpStatus.NOT_FOUND, 'Primero pide el código de eliminación'],
+  DELETION_CODE_INVALID: [HttpStatus.BAD_REQUEST, 'El código no es válido o venció; pide uno nuevo'],
+  DELETION_CODE_LOCKED: [HttpStatus.BAD_REQUEST, 'Demasiados intentos; pide un código nuevo'],
   COMPANY_NAME_MISMATCH: [HttpStatus.BAD_REQUEST, 'El nombre de la empresa no coincide'],
 };
 
@@ -52,8 +52,8 @@ export class TenantDeletionService {
     await this.mailer.send({
       to: auth.email,
       subject: `Código para eliminar ${companyName} de BeeCRM`,
-      text: `Tu código para eliminar la empresa ${companyName} y TODOS sus datos es: ${code}\n\nVence en 30 minutos. Si no lo pediste, ignorá este correo y cambiá tu contraseña.`,
-      html: `<p>Tu código para eliminar la empresa <strong>${escapeHtml(companyName)}</strong> y <strong>todos</strong> sus datos es:</p><p style="font-size:24px;letter-spacing:4px"><strong>${code}</strong></p><p>Vence en 30 minutos. Si no lo pediste, ignorá este correo y cambiá tu contraseña.</p>`,
+      text: `Tu código para eliminar la empresa ${companyName} y TODOS sus datos es: ${code}\n\nVence en 30 minutos. Si no lo pediste, ignora este correo y cambia tu contraseña.`,
+      html: `<p>Tu código para eliminar la empresa <strong>${escapeHtml(companyName)}</strong> y <strong>todos</strong> sus datos es:</p><p style="font-size:24px;letter-spacing:4px"><strong>${code}</strong></p><p>Vence en 30 minutos. Si no lo pediste, ignora este correo y cambia tu contraseña.</p>`,
     });
     return { requested: true, expiresInMinutes: CODE_TTL_MS / 60_000 };
   }

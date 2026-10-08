@@ -54,11 +54,33 @@ export function loadEnv(source: Record<string, string | undefined> = process.env
       STORAGE_DIR: devDefault('./storage'),
       STORAGE_SIGNING_KEY: devDefault('dev-only-storage-signing-key-change-me').pipe(z.string().min(32)),
       TRIAL_DAYS: z.coerce.number().int().min(1).max(60).default(14),
+      // E05 IA. "openai" = cualquier API compatible con OpenAI: Groq (https://api.groq.com/openai/v1),
+      // DeepSeek (https://api.deepseek.com) u Ollama local. "local" simula el modelo en desarrollo.
+      LLM_API: z.enum(['none', 'openai', 'local']).default('none'),
+      LLM_BASE_URL: z.url().optional(),
+      LLM_API_KEY: z.string().min(1).optional(),
+      LLM_MODEL: z.string().min(1).optional(),
+      // Precio en USD por millón de tokens, para el registro de costos (E05-S08).
+      LLM_PRICE_INPUT_PER_MTOK: z.coerce.number().min(0).default(0),
+      LLM_PRICE_OUTPUT_PER_MTOK: z.coerce.number().min(0).default(0),
+      // Presupuesto de latencia: la respuesta p95 debe quedar bajo 10 s (E05-S03).
+      LLM_TIMEOUT_MS: z.coerce.number().int().min(1000).max(30_000).default(8000),
+      // Embeddings: ni Groq ni DeepSeek los ofrecen; se usa un modelo local (p. ej. bge-m3 en Ollama, 1024 dimensiones).
+      EMBEDDINGS_API: z.enum(['none', 'openai', 'local']).default('none'),
+      EMBEDDINGS_BASE_URL: z.url().optional(),
+      EMBEDDINGS_API_KEY: z.string().min(1).optional(),
+      EMBEDDINGS_MODEL: z.string().min(1).optional(),
     })
     .superRefine((env, ctx) => {
-      // E13-S07: los simuladores aprueban cobros y mensajes sin hablar con nadie.
+      const require = (key: keyof typeof env, why: string) => {
+        if (!env[key]) ctx.addIssue({ code: 'custom', path: [key], message: `${key} es obligatoria ${why}` });
+      };
+      if (env.LLM_API === 'openai') for (const key of ['LLM_BASE_URL', 'LLM_MODEL', 'LLM_API_KEY'] as const) require(key, 'con LLM_API=openai');
+      if (env.EMBEDDINGS_API === 'openai') for (const key of ['EMBEDDINGS_BASE_URL', 'EMBEDDINGS_MODEL'] as const) require(key, 'con EMBEDDINGS_API=openai');
+
+      // E13-S07: los simuladores aprueban cobros, mensajes y respuestas sin hablar con nadie.
       if (env.NODE_ENV !== 'production') return;
-      for (const key of ['WOMPI_API', 'WHATSAPP_API'] as const) {
+      for (const key of ['WOMPI_API', 'WHATSAPP_API', 'LLM_API', 'EMBEDDINGS_API'] as const) {
         if (env[key] === 'local') ctx.addIssue({ code: 'custom', path: [key], message: `${key}=local no se permite en producción` });
       }
     })

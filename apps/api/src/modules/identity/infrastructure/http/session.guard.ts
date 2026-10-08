@@ -82,7 +82,7 @@ export class SessionGuard implements CanActivate {
     // E10-S02 — Solo lectura: se lee y se exporta todo; no se modifica nada salvo lo explícitamente permitido.
     if ((accountStatus === 'read_only' || accountStatus === 'canceled') && !SAFE_METHODS.has(req.method)
       && !this.reflector.getAllAndOverride<boolean>(ALLOW_READ_ONLY_KEY, [context.getHandler(), context.getClass()])) {
-      throw new AppError(HttpStatus.PAYMENT_REQUIRED, 'ACCOUNT_READ_ONLY', 'Tu cuenta está en solo lectura. Activá un plan para seguir trabajando; tus datos están intactos.');
+      throw new AppError(HttpStatus.PAYMENT_REQUIRED, 'ACCOUNT_READ_ONLY', 'Tu cuenta está en solo lectura. Activa un plan para seguir trabajando; tus datos están intactos.');
     }
 
     req.auth = { userId: result.user.id, email: result.user.email, tenantId, role: rows[0].role, accountStatus };

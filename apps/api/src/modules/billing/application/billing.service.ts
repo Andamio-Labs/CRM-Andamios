@@ -84,15 +84,15 @@ export class BillingService {
 
   async subscribe(auth: AuthContext, { plan }: z.infer<typeof subscribeSchema>) {
     const [sub] = await withTenant(this.db, auth.tenantId, (tx) => tx.select().from(subscriptions));
-    if (!sub!.paymentSourceId) throw conflict('PAYMENT_METHOD_REQUIRED', 'Agregá una tarjeta antes de suscribirte');
+    if (!sub!.paymentSourceId) throw conflict('PAYMENT_METHOD_REQUIRED', 'Agrega una tarjeta antes de suscribirte');
     if (sub!.status === 'active') {
       throw sub!.plan === plan
-        ? conflict('ALREADY_SUBSCRIBED', 'Ya tenés este plan activo')
+        ? conflict('ALREADY_SUBSCRIBED', 'Ya tienes este plan activo')
         : conflict('PLAN_CHANGE_NOT_AVAILABLE', 'El cambio de plan todavía no está disponible; escribinos y lo hacemos por vos');
     }
     if (sub!.status === 'past_due') throw conflict('PAST_DUE', 'Tu pago está en reintento automático. Si cambiaste la tarjeta, lo cobramos en el próximo intento.');
     const charge = await this.charge(auth.tenantId, { kind: 'subscribe', plan, attempt: 1, periodStart: new Date() });
-    if (!charge) throw conflict('CHARGE_IN_PROGRESS', 'Ya hay un cobro en curso; esperá su resultado');
+    if (!charge) throw conflict('CHARGE_IN_PROGRESS', 'Ya hay un cobro en curso; espera su resultado');
     return { id: charge.id, reference: charge.reference, plan: charge.plan, amountInCents: charge.amountInCents, status: charge.status };
   }
 
@@ -133,8 +133,8 @@ export class BillingService {
         .where(eq(subscriptions.status, 'trialing')).returning());
       if (!changed) continue;
       await this.notifications.notify(tenantId, await this.ownerIds(tenantId), {
-        type: 'billing', title: 'Tu prueba terminó', link: '/settings', email: true,
-        body: 'Tu cuenta quedó en solo lectura: podés ver y exportar todo, pero no modificar. Activá un plan para seguir trabajando; tus datos están intactos.',
+        type: 'billing', title: 'Tu prueba terminó', link: '/settings?tab=plan', email: true,
+        body: 'Tu cuenta quedó en solo lectura: puedes ver y exportar todo, pero no modificar. Activa un plan para seguir trabajando; tus datos están intactos.',
       });
     }
   }
@@ -178,19 +178,19 @@ export class BillingService {
         return { charge, notice: { title: 'Pago recibido', body: `Cobramos ${money(charge.amountInCents)} del plan ${PLANS[charge.plan as PaidPlanId].name}. Tu próximo cobro es el ${charge.periodEnd.toLocaleDateString('es-CO')}.` } };
       }
       if (charge.kind === 'subscribe') {
-        return { charge, notice: { title: 'No pudimos cobrar tu suscripción', body: `Wompi rechazó el pago (${info.reason}). Tu cuenta sigue como estaba; revisá la tarjeta e intentá de nuevo.` } };
+        return { charge, notice: { title: 'No pudimos cobrar tu suscripción', body: `Wompi rechazó el pago (${info.reason}). Tu cuenta sigue como estaba; revisa la tarjeta e intenta de nuevo.` } };
       }
       const retry = nextRetryAt(charge.attempt, now);
       await tx.update(subscriptions).set({ status: retry ? 'past_due' : 'read_only', failedAttempts: charge.attempt, nextRetryAt: retry });
       return {
         charge,
         notice: retry
-          ? { title: 'No pudimos cobrar tu suscripción', body: `Wompi rechazó el pago (${info.reason}). Lo reintentamos el ${retry.toLocaleDateString('es-CO')}; si querés, actualizá la tarjeta antes.` }
-          : { title: 'Tu cuenta quedó en solo lectura', body: 'No pudimos cobrar la suscripción después de varios intentos. Tus datos están intactos: actualizá la tarjeta y suscribite de nuevo para seguir trabajando.' },
+          ? { title: 'No pudimos cobrar tu suscripción', body: `Wompi rechazó el pago (${info.reason}). Lo reintentamos el ${retry.toLocaleDateString('es-CO')}; si quieres, actualiza la tarjeta antes.` }
+          : { title: 'Tu cuenta quedó en solo lectura', body: 'No pudimos cobrar la suscripción después de varios intentos. Tus datos están intactos: actualiza la tarjeta y suscríbete de nuevo para seguir trabajando.' },
       };
     });
     if (!result) return (await withTenant(this.db, tenantId, (tx) => tx.select().from(billingCharges).where(eq(billingCharges.id, chargeId))))[0]!;
-    await this.notifications.notify(tenantId, await this.ownerIds(tenantId), { type: 'billing', ...result.notice, link: '/settings', email: true });
+    await this.notifications.notify(tenantId, await this.ownerIds(tenantId), { type: 'billing', ...result.notice, link: '/settings?tab=plan', email: true });
     return result.charge;
   }
 

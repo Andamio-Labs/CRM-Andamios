@@ -4,6 +4,8 @@ export const NOTIFICATION_TYPES = {
   no_reply: { label: 'Clientes esperando respuesta', emailLocked: false },
   sla_breach: { label: 'Primera respuesta fuera de tiempo (SLA)', emailLocked: false },
   deal_won: { label: 'Negocios ganados', emailLocked: false },
+  ai_handoff: { label: 'El asistente pasó un cliente a una persona', emailLocked: false },
+  ai_quota: { label: 'Cuota del asistente de IA', emailLocked: false },
   // Avisos de cobro y de cuenta en solo lectura: el propietario no puede dejar de recibirlos por correo.
   billing: { label: 'Plan y pagos', emailLocked: true },
 } as const;

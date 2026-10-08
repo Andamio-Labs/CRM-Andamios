@@ -24,7 +24,7 @@ describe('Preferencias de notificaciones (E14-S04)', () => {
 
   it('cada tipo arranca con app y correo activos; el correo de cobros no se puede apagar', async () => {
     const prefs = (await team.seller.api.get('/api/v1/notifications/preferences').expect(200)).body;
-    expect(prefs.map((p: { type: string }) => p.type)).toEqual(['task_reminder', 'no_reply', 'sla_breach', 'deal_won', 'billing']);
+    expect(prefs.map((p: { type: string }) => p.type)).toEqual(['task_reminder', 'no_reply', 'sla_breach', 'deal_won', 'ai_handoff', 'ai_quota', 'billing']);
     expect(prefs.every((p: { inApp: boolean; email: boolean }) => p.inApp && p.email)).toBe(true);
     expect(prefs.find((p: { type: string }) => p.type === 'billing')).toMatchObject({ emailLocked: true });
     expect(prefs[0].label).toBeTruthy();

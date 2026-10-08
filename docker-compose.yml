@@ -55,6 +55,18 @@ services:
       REDIS_URL: redis://valkey:6379
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
+      # E05 IA. Por defecto simulada ("local"). Para la real (ver docs/ia.md):
+      #   LLM_API=openai LLM_BASE_URL=https://api.groq.com/openai/v1 LLM_MODEL=llama-3.3-70b-versatile LLM_API_KEY=… docker compose up
+      #   EMBEDDINGS_API=openai EMBEDDINGS_BASE_URL=http://ollama:11434/v1 EMBEDDINGS_MODEL=bge-m3 (con --profile ia)
+      LLM_API: ${LLM_API:-local}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_PRICE_INPUT_PER_MTOK: ${LLM_PRICE_INPUT_PER_MTOK:-0}
+      LLM_PRICE_OUTPUT_PER_MTOK: ${LLM_PRICE_OUTPUT_PER_MTOK:-0}
+      EMBEDDINGS_API: ${EMBEDDINGS_API:-local}
+      EMBEDDINGS_BASE_URL: ${EMBEDDINGS_BASE_URL:-}
+      EMBEDDINGS_MODEL: ${EMBEDDINGS_MODEL:-}
     ports: ["3000:3000"]
     depends_on:
       deps: { condition: service_completed_successfully }
@@ -91,6 +103,15 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
 
+  # ── E05 Embeddings locales: docker compose --profile ia up ollama
+  #    y una vez: docker compose exec ollama ollama pull bge-m3   (1024 dimensiones, multilingüe)
+  ollama:
+    image: ollama/ollama:latest
+    profiles: [ia]
+    ports: ["11434:11434"]
+    volumes:
+      - ollama:/root/.ollama
+
   # ── E15-S03 Observabilidad local: docker compose --profile observability up ──
   prometheus:
     image: prom/prometheus:latest
@@ -119,3 +140,4 @@ volumes:
   api_node_modules:
   web_node_modules:
   pnpm_store:
+  ollama:

@@ -2,13 +2,16 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { and, eq, sql } from 'drizzle-orm';
 import type pg from 'pg';
 import type { Database, Transaction } from '../../../shared/database/database.js';
-import { contacts, conversations, deals, messages, tenantSettings, waLinks } from '../../../shared/database/schema.js';
+import { aiAgents, contacts, conversations, deals, messages, tenantSettings, waLinks } from '../../../shared/database/schema.js';
 import { DomainEvents } from '../../../shared/events/domain-events.js';
 import { extractRefCode } from '../../marketing/domain/wa-link.js';
 import { withTenant } from '../../../shared/database/with-tenant.js';
 import type { JobQueue } from '../../../shared/queue/bull-queue.js';
 import { RealtimeGateway } from '../../../shared/realtime/realtime.gateway.js';
 import { DB, JOB_QUEUE, PG_POOL } from '../../../shared/tokens.js';
+import { AgentRuntime } from '../../ai/application/agent-runtime.js';
+import type { AiReplyJob } from '../../ai/application/auto-reply.service.js';
+import { agentOnDuty, isAiPaused } from '../../ai/domain/handoff.js';
 import { createSystemDeal } from '../../pipeline/application/pipelines.service.js';
 import { isWithinBusinessHours } from '../domain/business-hours.js';
 import { recordConsent } from '../../contacts/application/consents.service.js';
@@ -23,7 +26,11 @@ import { TemplatesService } from './templates.service.js';
 const OPT_OUT_CONFIRMATION = 'Listo, no te enviaremos más mensajes promocionales. Si quieres volver a recibirlos, responde ALTA.';
 const OPT_IN_CONFIRMATION = 'Listo, volverás a recibir nuestros mensajes. Para dejar de recibirlos responde BAJA.';
 
-type Job = { queue: 'outbound' | 'webhooks'; name: string; data: SendJob | MediaJob; jobId: string };
+type Job = { queue: 'outbound' | 'webhooks' | 'ai'; name: string; data: SendJob | MediaJob | AiReplyJob; jobId: string; delayMs?: number };
+type Agent = typeof aiAgents.$inferSelect | undefined;
+
+/** Espera antes de que responda la IA: si el cliente manda varios mensajes seguidos, contesta una vez (E05-S03). */
+const AI_DEBOUNCE_MS = 1500;
 type Event = { event: string; payload: object; ownerId: string | null };
 type Lead = { contactId: string; dealId: string | null; conversationId: string };
 
@@ -43,6 +50,7 @@ export class InboundService {
     private readonly realtime: RealtimeGateway,
     private readonly templates: TemplatesService,
     private readonly domainEvents: DomainEvents,
+    private readonly ai: AgentRuntime,
   ) {}
 
   async process(payload: unknown) {
@@ -70,7 +78,8 @@ export class InboundService {
 
     await withTenant(this.db, tenantId, async (tx) => {
       const [settings] = await tx.select().from(tenantSettings);
-      for (const msg of batch.messages) await this.handleMessage(tx, tenantId, channelId, batch.phoneNumberId, msg, settings!, events, jobs, leads);
+      const [agent] = this.ai.configured ? await tx.select().from(aiAgents) : [];
+      for (const msg of batch.messages) await this.handleMessage(tx, tenantId, channelId, batch.phoneNumberId, msg, settings!, agent, events, jobs, leads);
 
       for (const update of batch.statuses) {
         const [current] = await tx.select().from(messages).where(eq(messages.waMessageId, update.waMessageId));
@@ -81,14 +90,14 @@ export class InboundService {
       }
     });
 
-    for (const job of jobs) await this.queue.enqueue(job.queue, job.name, job.data, { jobId: job.jobId });
+    for (const job of jobs) await this.queue.enqueue(job.queue, job.name, job.data, { jobId: job.jobId, delayMs: job.delayMs });
     for (const e of events) this.realtime.publish(tenantId, e.event, e.payload, e.ownerId);
     for (const lead of leads) await this.domainEvents.emit({ type: 'lead.created', tenantId, ...lead });
   }
 
   private async handleMessage(
     tx: Transaction, tenantId: string, channelId: string, phoneNumberId: string, msg: InboundMessage,
-    settings: typeof tenantSettings.$inferSelect, events: Event[], jobs: Job[], leads: Lead[],
+    settings: typeof tenantSettings.$inferSelect, agent: Agent, events: Event[], jobs: Job[], leads: Lead[],
   ) {
     let [contact] = await tx.select().from(contacts).where(eq(contacts.phone, msg.from)).limit(1);
     const isNewLead = !contact;
@@ -140,9 +149,16 @@ export class InboundService {
       await recordConsent(tx, { ...consent, purposes: ['customer_service'], granted: true, evidence: 'El cliente escribió primero', recordedAt: msg.at });
     }
 
-    // E04-S10 — Fuera de horario: una vez por conversación, hasta que responda una persona.
+    // E05-S03 — Responde el agente de IA si está activo, de turno y la conversación no está en pausa.
+    const aiWillReply = !!agent?.enabled && msg.type === 'text' && !keyword
+      && agentOnDuty(agent.schedule, settings.businessHours, settings.timezone, msg.at) && !isAiPaused(conversation!.aiPausedUntil);
+    if (aiWillReply) {
+      jobs.push({ queue: 'ai', name: 'ai.reply', data: { tenantId, conversationId: conversation!.id, messageId: inserted.id }, jobId: `ai:${inserted.id}`, delayMs: AI_DEBOUNCE_MS });
+    }
+
+    // E04-S10 — Fuera de horario: una vez por conversación, hasta que responda una persona. Si responde la IA, no hace falta.
     const outOfHours = settings.outOfHoursEnabled && !isWithinBusinessHours(settings.businessHours, settings.timezone, msg.at);
-    if (!keyword && outOfHours && !conversation!.autoReplyAt) {
+    if (!keyword && !aiWillReply && outOfHours && !conversation!.autoReplyAt) {
       await tx.update(conversations).set({ autoReplyAt: new Date() }).where(eq(conversations.id, conversation!.id));
       await this.reply(tx, tenantId, conversation!.id, settings.outOfHoursMessage, jobs);
     }
