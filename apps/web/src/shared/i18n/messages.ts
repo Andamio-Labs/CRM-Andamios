@@ -5,6 +5,7 @@
 const esCO = {
   'nav.home': 'Dashboard',
   'nav.tasks': 'Tareas',
+  'nav.reports': 'Reportes',
   'nav.deals': 'Negocios',
   'nav.inbox': 'Conversaciones',
   'nav.contacts': 'Clientes',
@@ -21,6 +22,7 @@ const catalogs: Record<string, Partial<Record<MessageKey, string>>> = {
   'pt-BR': {
     'nav.home': 'Dashboard',
     'nav.tasks': 'Tarefas',
+    'nav.reports': 'Relatórios',
     'nav.deals': 'Negócios',
     'nav.inbox': 'Conversas',
     'nav.contacts': 'Clientes',

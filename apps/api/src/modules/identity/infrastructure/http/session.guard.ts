@@ -3,6 +3,7 @@ import {
   createParamDecorator,
   type ExecutionContext,
   ForbiddenException,
+  HttpStatus,
   Inject,
   Injectable,
   Optional,
@@ -14,6 +15,7 @@ import type { IncomingHttpHeaders } from 'node:http';
 import type { Request } from 'express';
 import { PinoLogger } from 'nestjs-pino';
 import type pg from 'pg';
+import { AppError } from '../../../../shared/http/app-error.js';
 import { AUTH, PG_POOL } from '../../../../shared/tokens.js';
 import { type Action, can } from '../../domain/permissions.js';
 import type { Role } from '../../domain/roles.js';
@@ -25,6 +27,8 @@ export interface AuthContext {
   email: string;
   tenantId: string;
   role: Role;
+  /** Estado efectivo de la suscripción (E10-S02): una prueba vencida ya es `read_only`. */
+  accountStatus: string;
 }
 
 type AuthedRequest = Request & { auth?: AuthContext };
@@ -47,9 +51,15 @@ export class SessionResolver {
   }
 }
 
+const ALLOW_READ_ONLY_KEY = 'allowWhenReadOnly';
+/** La ruta modifica datos pero debe funcionar en solo lectura: pagar, eliminar la empresa, derechos del titular. */
+export const AllowWhenReadOnly = () => SetMetadata(ALLOW_READ_ONLY_KEY, true);
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
 @Injectable()
 export class SessionGuard implements CanActivate {
   constructor(
+    private readonly reflector: Reflector,
     private readonly sessions: SessionResolver,
     @Inject(PG_POOL) private readonly conn: { pool: pg.Pool },
     @Optional() private readonly logger?: PinoLogger,
@@ -62,13 +72,20 @@ export class SessionGuard implements CanActivate {
     if (!result || !tenantId) throw new UnauthorizedException();
 
     // La membresía se consulta en CADA request: si te quitan del equipo, perdés acceso al instante.
-    const { rows } = await this.conn.pool.query<{ role: Role }>(
-      `SELECT role FROM member WHERE "userId" = $1 AND "organizationId" = $2`,
+    const { rows } = await this.conn.pool.query<{ role: Role; account: string | null }>(
+      `SELECT role, account_status("organizationId") AS account FROM member WHERE "userId" = $1 AND "organizationId" = $2`,
       [result.user.id, tenantId],
     );
     if (!rows[0]) throw new UnauthorizedException();
+    const accountStatus = rows[0].account ?? 'trialing';
 
-    req.auth = { userId: result.user.id, email: result.user.email, tenantId, role: rows[0].role };
+    // E10-S02 — Solo lectura: se lee y se exporta todo; no se modifica nada salvo lo explícitamente permitido.
+    if ((accountStatus === 'read_only' || accountStatus === 'canceled') && !SAFE_METHODS.has(req.method)
+      && !this.reflector.getAllAndOverride<boolean>(ALLOW_READ_ONLY_KEY, [context.getHandler(), context.getClass()])) {
+      throw new AppError(HttpStatus.PAYMENT_REQUIRED, 'ACCOUNT_READ_ONLY', 'Tu cuenta está en solo lectura. Activá un plan para seguir trabajando; tus datos están intactos.');
+    }
+
+    req.auth = { userId: result.user.id, email: result.user.email, tenantId, role: rows[0].role, accountStatus };
     this.logger?.assign({ tenantId, userId: result.user.id });
     return true;
   }

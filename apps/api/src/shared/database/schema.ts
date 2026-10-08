@@ -5,6 +5,7 @@ import {
   char,
   date,
   doublePrecision,
+  inet,
   integer,
   jsonb,
   numeric,
@@ -35,6 +36,8 @@ export const tenantSettings = pgTable('tenant_settings', {
   /** E04-S10 */
   outOfHoursEnabled: boolean('out_of_hours_enabled').notNull().default(false),
   outOfHoursMessage: text('out_of_hours_message').notNull(),
+  /** E08-S02 */
+  firstResponseSlaMinutes: integer('first_response_sla_minutes').notNull().default(60),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -56,6 +59,13 @@ export const subscriptions = pgTable('subscriptions', {
   status: text('status', { enum: ['trialing', 'active', 'past_due', 'read_only', 'canceled'] }).notNull(),
   trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  // E10-S03 Wompi
+  currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }),
+  paymentSourceId: text('payment_source_id'),
+  cardBrand: text('card_brand'),
+  cardLast4: char('card_last4', { length: 4 }),
+  failedAttempts: integer('failed_attempts').notNull().default(0),
+  nextRetryAt: timestamp('next_retry_at', { withTimezone: true }),
 });
 
 // ── Sprint 2: E02 contactos ──────────────────────────────────────────────
@@ -229,6 +239,7 @@ export const conversations = pgTable('conversations', {
   unreadCount: integer('unread_count').notNull().default(0),
   autoReplyAt: ts('auto_reply_at'),
   noReplyAlertedAt: ts('no_reply_alerted_at'),
+  firstResponseAlertedAt: ts('first_response_alerted_at'),
   createdAt: ts('created_at').notNull().defaultNow(),
 });
 
@@ -303,6 +314,7 @@ export const notifications = pgTable('notifications', {
   title: text('title').notNull(),
   body: text('body'),
   link: text('link'),
+  inApp: boolean('in_app').notNull().default(true),
   readAt: ts('read_at'),
   createdAt: ts('created_at').notNull().defaultNow(),
 });
@@ -314,9 +326,106 @@ export const auditLog = pgTable('audit_log', {
   action: text('action').notNull(),
   entity: text('entity').notNull(),
   entityId: text('entity_id'),
-  data: jsonb('data').notNull().default({}),
+  data: jsonb('data').$type<Record<string, unknown>>().notNull().default({}),
+  ip: inet('ip'),
   createdAt: ts('created_at').notNull().defaultNow(),
 });
+
+/** E13-S02 — Consentimiento por finalidad (append-only; el estado actual es el último registro). */
+export const contactConsents = pgTable('contact_consents', {
+  id: bigserial('id', { mode: 'number' }).primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  contactId: uuid('contact_id').notNull(),
+  legalBasis: text('legal_basis').$type<'consent' | 'contract' | 'legal_obligation' | 'public_data'>().notNull(),
+  purposes: text('purposes').array().$type<('sales' | 'customer_service' | 'marketing' | 'billing')[]>().notNull(),
+  granted: boolean('granted').notNull(),
+  channel: text('channel').$type<'whatsapp' | 'web_form' | 'phone' | 'email' | 'in_person' | 'import'>().notNull(),
+  evidence: text('evidence'),
+  recordedBy: text('recorded_by'),
+  recordedAt: ts('recorded_at').notNull().defaultNow(),
+});
+
+/** E05-S01 — Configuración del agente de IA (una por empresa). */
+export const aiAgents = pgTable('ai_agents', {
+  tenantId: text('tenant_id').primaryKey(),
+  name: text('name').notNull().default('Asistente'),
+  tone: text('tone').$type<'friendly' | 'formal' | 'neutral'>().notNull().default('friendly'),
+  language: text('language').$type<'es-CO' | 'es-MX' | 'pt-BR'>().notNull().default('es-CO'),
+  schedule: text('schedule').$type<'always' | 'business_hours' | 'out_of_hours'>().notNull().default('always'),
+  instructions: text('instructions').notNull().default(''),
+  enabled: boolean('enabled').notNull().default(false),
+  updatedBy: text('updated_by'),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+});
+
+/** E05-S02 — Base de conocimiento del agente (FAQ y texto) y sus fragmentos. */
+export const knowledgeSources = pgTable('knowledge_sources', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: text('tenant_id').notNull(),
+  kind: text('kind').$type<'text' | 'faq'>().notNull(),
+  title: text('title').notNull(),
+  content: text('content'),
+  faq: jsonb('faq').$type<{ question: string; answer: string }[]>(),
+  status: text('status').$type<'waiting_ai' | 'indexing' | 'ready' | 'failed'>().notNull(),
+  error: text('error'),
+  chunkCount: integer('chunk_count').notNull().default(0),
+  createdBy: text('created_by'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+});
+
+export const knowledgeChunks = pgTable('knowledge_chunks', {
+  id: bigserial('id', { mode: 'number' }).primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  sourceId: uuid('source_id').notNull(),
+  ordinal: integer('ordinal').notNull(),
+  content: text('content').notNull(),
+});
+
+/** E10-S03 — Cada intento de cobro de la suscripción en Wompi. */
+export const billingCharges = pgTable('billing_charges', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: text('tenant_id').notNull(),
+  reference: text('reference').notNull(),
+  kind: text('kind').$type<'subscribe' | 'renewal'>().notNull(),
+  plan: text('plan').notNull(),
+  amountInCents: bigint('amount_in_cents', { mode: 'number' }).notNull(),
+  currency: char('currency', { length: 3 }).notNull().default('COP'),
+  attempt: integer('attempt').notNull(),
+  periodStart: ts('period_start').notNull(),
+  periodEnd: ts('period_end').notNull(),
+  status: text('status').$type<'pending' | 'approved' | 'declined'>().notNull().default('pending'),
+  wompiTransactionId: text('wompi_transaction_id'),
+  failureReason: text('failure_reason'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+});
+
+/** E13-S03 — Solicitudes de titulares (Ley 1581) con su plazo legal. */
+export const privacyRequests = pgTable('privacy_requests', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: text('tenant_id').notNull(),
+  contactId: uuid('contact_id'),
+  type: text('type').$type<'access' | 'update' | 'erase' | 'export'>().notNull(),
+  channel: text('channel').$type<'whatsapp' | 'web_form' | 'phone' | 'email' | 'in_person'>().notNull(),
+  details: text('details'),
+  status: text('status').$type<'open' | 'resolved' | 'rejected'>().notNull().default('open'),
+  dueAt: ts('due_at').notNull(),
+  resolution: text('resolution'),
+  resolvedBy: text('resolved_by'),
+  resolvedAt: ts('resolved_at'),
+  createdBy: text('created_by'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});
+
+/** E14-S04 — Preferencias de notificación por persona y tipo. */
+export const notificationPreferences = pgTable('notification_preferences', {
+  tenantId: text('tenant_id').notNull(),
+  userId: text('user_id').notNull(),
+  type: text('type').notNull(),
+  inApp: boolean('in_app').notNull(),
+  email: boolean('email').notNull(),
+}, (t) => [primaryKey({ columns: [t.tenantId, t.userId, t.type] })]);
 
 export const importJobs = pgTable('import_jobs', {
   id: uuid('id').primaryKey().defaultRandom(),

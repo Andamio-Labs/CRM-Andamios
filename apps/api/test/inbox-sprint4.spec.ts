@@ -184,6 +184,14 @@ describe('Bandeja (Sprint 4)', () => {
 
       await sendWebhook(t, inboundText(pnid, from, 'ALTA')).expect(200);
       await team.owner.api.post(`/api/v1/conversations/${conv.id}/messages`, { type: 'template', templateId: tplId, variables: [] }).expect(202);
+
+      // E13-S02 — Cada paso queda en el historial de consentimiento, por WhatsApp.
+      const { history } = (await team.owner.api.get(`/api/v1/contacts/${conv.contact.id}/consents`).expect(200)).body;
+      expect(history.map((h: { granted: boolean; purposes: string[]; channel: string }) => [h.granted, h.purposes, h.channel])).toEqual([
+        [true, ['marketing'], 'whatsapp'],
+        [false, ['marketing'], 'whatsapp'],
+        [true, ['customer_service'], 'whatsapp'],
+      ]);
     });
 
     it('el consentimiento también se registra a mano con su origen', async () => {

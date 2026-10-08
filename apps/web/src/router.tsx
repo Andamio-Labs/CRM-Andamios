@@ -2,6 +2,7 @@ import { createRootRoute, createRoute, createRouter, Outlet, redirect } from '@t
 import { LoginPage } from './features/auth/LoginPage';
 import { ForgotPasswordPage, ResetPasswordPage } from './features/auth/PasswordResetPages';
 import { RegisterPage } from './features/auth/RegisterPage';
+import { ReportsPage } from './features/reports/ReportsPage';
 import { ContactsPage } from './features/contacts/ContactsPage';
 import { HomePage } from './features/home/HomePage';
 import { InboxPage } from './features/inbox/InboxPage';
@@ -32,6 +33,7 @@ const routes = [
   createRoute({ getParentRoute: () => rootRoute, path: '/contacts', beforeLoad: requireSession, component: ContactsPage }),
   createRoute({ getParentRoute: () => rootRoute, path: '/inbox', beforeLoad: requireSession, component: InboxPage }),
   createRoute({ getParentRoute: () => rootRoute, path: '/tasks', beforeLoad: requireSession, component: TasksPage }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/reports', beforeLoad: requireSession, component: ReportsPage }),
   createRoute({ getParentRoute: () => rootRoute, path: '/legal/terminos', component: () => <LegalPage doc="terminos" /> }),
   createRoute({ getParentRoute: () => rootRoute, path: '/legal/privacidad', component: () => <LegalPage doc="privacidad" /> }),
   createRoute({ getParentRoute: () => rootRoute, path: '/invitations/$invitationId', component: AcceptInvitationPage }),

@@ -6,6 +6,7 @@ import { DataTransferService, type ImportJob } from './application/data-transfer
 import { IdentityModule } from '../identity/identity.module.js';
 import { TenancyModule } from '../tenancy/tenancy.module.js';
 import { CompaniesService } from './application/companies.service.js';
+import { ConsentsService } from './application/consents.service.js';
 import { ContactsService } from './application/contacts.service.js';
 import { CustomFieldsService } from './application/custom-fields.service.js';
 import { TimelineService } from './application/timeline.service.js';
@@ -16,7 +17,7 @@ import { CompaniesController, ContactsController, CustomFieldsController, DataTr
 @Module({
   imports: [IdentityModule, TenancyModule, BillingModule],
   controllers: [ContactsController, CompaniesController, CustomFieldsController, ViewsController, SearchController, DataTransferController],
-  providers: [ContactsService, CompaniesService, CustomFieldsService, ViewsService, SearchService, TimelineService, DataTransferService],
+  providers: [ContactsService, CompaniesService, CustomFieldsService, ViewsService, SearchService, TimelineService, DataTransferService, ConsentsService],
   exports: [ContactsService, CustomFieldsService],
 })
 export class ContactsModule {

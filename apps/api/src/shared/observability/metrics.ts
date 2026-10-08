@@ -73,7 +73,7 @@ export class MetricsController {
 }
 
 /** Comparación en tiempo constante: no filtra el token por tiempos de respuesta. */
-function sameSecret(a: string, b: string) {
+export function sameSecret(a: string, b: string) {
   const x = Buffer.from(a);
   const y = Buffer.from(b);
   return x.length === y.length && timingSafeEqual(x, y);

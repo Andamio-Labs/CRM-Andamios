@@ -11,6 +11,7 @@ import { RealtimeGateway } from '../../../shared/realtime/realtime.gateway.js';
 import { DB, JOB_QUEUE, PG_POOL } from '../../../shared/tokens.js';
 import { createSystemDeal } from '../../pipeline/application/pipelines.service.js';
 import { isWithinBusinessHours } from '../domain/business-hours.js';
+import { recordConsent } from '../../contacts/application/consents.service.js';
 import { consentKeyword } from '../domain/consent.js';
 import { classifyMetaError } from '../domain/meta-errors.js';
 import { canAdvanceStatus, type MessageStatus } from '../domain/message-status.js';
@@ -124,14 +125,19 @@ export class InboundService {
 
     // E04-S09 — Consentimiento: escribir primero es consentimiento; BAJA/ALTA lo cambian.
     const keyword = msg.type === 'text' ? consentKeyword(msg.body) : null;
+    // E13-S02 — Cada cambio queda también en el historial de consentimiento por finalidad.
+    const consent = { tenantId, contactId: contact!.id, legalBasis: 'consent' as const, channel: 'whatsapp' as const };
     if (keyword === 'opt_out') {
       await tx.update(contacts).set({ whatsappOptOutAt: new Date() }).where(eq(contacts.id, contact!.id));
+      await recordConsent(tx, { ...consent, purposes: ['marketing'], granted: false, evidence: `Palabra de baja: "${msg.body}"` });
       await this.reply(tx, tenantId, conversation!.id, OPT_OUT_CONFIRMATION, jobs);
     } else if (keyword === 'opt_in') {
       await tx.update(contacts).set({ whatsappOptOutAt: null, whatsappOptInAt: new Date(), whatsappOptInSource: 'palabra_alta' }).where(eq(contacts.id, contact!.id));
+      await recordConsent(tx, { ...consent, purposes: ['marketing'], granted: true, evidence: `Palabra de alta: "${msg.body}"` });
       await this.reply(tx, tenantId, conversation!.id, OPT_IN_CONFIRMATION, jobs);
     } else if (!contact!.whatsappOptInAt && !contact!.whatsappOptOutAt) {
       await tx.update(contacts).set({ whatsappOptInAt: msg.at, whatsappOptInSource: 'mensaje_entrante' }).where(eq(contacts.id, contact!.id));
+      await recordConsent(tx, { ...consent, purposes: ['customer_service'], granted: true, evidence: 'El cliente escribió primero', recordedAt: msg.at });
     }
 
     // E04-S10 — Fuera de horario: una vez por conversación, hasta que responda una persona.

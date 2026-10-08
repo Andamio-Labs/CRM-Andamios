@@ -41,6 +41,13 @@ export function loadEnv(source: Record<string, string | undefined> = process.env
       // Verificar la versión vigente en developers.facebook.com al desplegar.
       META_GRAPH_VERSION: z.string().regex(/^v\d+\.\d+$/).default('v23.0'),
       // E15-S06: mensajes por segundo por número (la Cloud API admite ~80).
+      // E10-S03 Wompi. WOMPI_API=local simula Wompi en desarrollo; sandbox: https://sandbox.wompi.co/v1
+      WOMPI_API: z.enum(['http', 'local']).default(isProduction(source) ? 'http' : 'local'),
+      WOMPI_URL: z.url().default('https://sandbox.wompi.co/v1'),
+      WOMPI_PUBLIC_KEY: devDefault('pub_test_local'),
+      WOMPI_PRIVATE_KEY: devDefault('prv_test_local'),
+      WOMPI_EVENTS_SECRET: devDefault('test_events_local'),
+      WOMPI_INTEGRITY_SECRET: devDefault('test_integrity_local'),
       WA_SEND_PER_SECOND: z.coerce.number().int().min(1).max(80).default(60),
       // E04-S06 Archivos (local: disco; en la nube: S3 con el mismo puerto ObjectStorage).
       STORAGE_DIR: devDefault('./storage'),

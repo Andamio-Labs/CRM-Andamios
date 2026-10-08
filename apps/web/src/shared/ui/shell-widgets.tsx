@@ -134,3 +134,28 @@ function Group({ title, items, go }: { title: string; items: { key: string; labe
     </div>
   );
 }
+
+interface PlanStatus { plan: string; status: string; trialEndsAt: string | null }
+
+/** E10-S02 — Aviso de prueba por vencer y de cuenta en solo lectura, en todas las pantallas. */
+export function AccountBanner() {
+  const plan = useQuery({ queryKey: ['plan'], queryFn: () => api<PlanStatus>('/api/v1/plan'), staleTime: 60_000 });
+  if (!plan.data) return null;
+  const { status, trialEndsAt } = plan.data;
+  if (status === 'read_only' || status === 'canceled') {
+    return (
+      <p role="status" className="mb-4 rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">
+        Tu cuenta está en solo lectura: podés ver y exportar todo, pero no modificar. <Link to="/settings" className="font-semibold underline">Activá un plan</Link> para seguir trabajando.
+      </p>
+    );
+  }
+  if (status === 'past_due') {
+    return <p role="status" className="mb-4 rounded-lg bg-honey/25 px-4 py-3 text-sm text-ink">No pudimos cobrar tu suscripción. <Link to="/settings" className="font-semibold underline">Revisá tu tarjeta</Link>.</p>;
+  }
+  if (status === 'trialing' && trialEndsAt) {
+    const days = Math.ceil((Date.parse(trialEndsAt) - Date.now()) / 86_400_000);
+    if (days > 7) return null;
+    return <p role="status" className="mb-4 rounded-lg bg-honey/25 px-4 py-3 text-sm text-ink">Te {days === 1 ? 'queda 1 día' : `quedan ${days} días`} de prueba. <Link to="/settings" className="font-semibold underline">Elegí un plan</Link>.</p>;
+  }
+  return null;
+}

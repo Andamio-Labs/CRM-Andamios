@@ -8,3 +8,5 @@ export const AUTH = Symbol('AUTH');
 export const JOB_QUEUE = Symbol('JOB_QUEUE');
 export const WHATSAPP_API = Symbol('WHATSAPP_API');
 export const STORAGE = Symbol('STORAGE');
+export const LLM_PROVIDER = Symbol('LLM_PROVIDER');
+export const WOMPI_API = Symbol('WOMPI_API');

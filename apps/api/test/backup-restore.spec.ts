@@ -70,6 +70,20 @@ describe('Backup y restauración (E15-S04)', () => {
     );
   });
 
+  it('E13-S04: una empresa eliminada después del backup no revive al restaurar (lista tomada de la base viva)', async () => {
+    const file = (await sh('ls -t /backups/*.dump.gpg | head -1')).output.trim();
+    await psql('beecrm', "INSERT INTO tenant_deletions (organization_id) VALUES ('org-1')");
+    try {
+      const run = await sh(`/scripts/restore.sh ${file} beecrm_reapply`, { LIVE_DATABASE: 'beecrm' });
+      expect(run.exitCode, run.output).toBe(0);
+      expect(run.output).toMatch(/eliminaciones reaplicadas: 1/);
+      expect(await psql('beecrm_reapply', 'SELECT count(*) FROM organization')).toBe('0');
+      expect(await psql('beecrm_reapply', 'SELECT count(*) FROM tenant_settings')).toBe('0');
+    } finally {
+      await psql('beecrm', "DELETE FROM tenant_deletions WHERE organization_id = 'org-1'");
+    }
+  });
+
   it('con la frase incorrecta no restaura nada', async () => {
     const file = (await sh('ls -t /backups/*.dump.gpg | head -1')).output.trim();
     const run = await sh(`/scripts/restore.sh ${file} beecrm_wrong_key`, { BACKUP_PASSPHRASE: 'otra-frase' });

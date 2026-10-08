@@ -5,6 +5,7 @@ import { api } from '../../shared/api';
 import { useRegion } from '../../shared/i18n/use-region';
 import { AppShell } from '../../shared/ui/app-shell';
 import { Alert } from '../../shared/ui/form';
+import { OnboardingChecklist } from './OnboardingChecklist';
 
 interface Task { id: string; title: string; dueAt: string | null; dealTitle: string | null; contactName: string | null }
 interface Dashboard {
@@ -23,6 +24,7 @@ export function HomePage() {
 
   return (
     <AppShell title="Dashboard" subtitle="Lo importante para tu equipo, en un solo lugar." wide>
+      <OnboardingChecklist />
       {dashboard.isPending && <p className="text-sm text-muted">Cargando dashboard…</p>}
       {dashboard.isError && <Alert>No pudimos cargar el dashboard. Recarga la página.</Alert>}
       {dashboard.data && (

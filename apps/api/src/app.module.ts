@@ -2,6 +2,11 @@ import { Controller, Get, Global, type MiddlewareConsumer, Module, type NestModu
 import { loadEnv } from './config/env.js';
 import { ContactsModule } from './modules/contacts/contacts.module.js';
 import { IdentityModule } from './modules/identity/identity.module.js';
+import { AiModule } from './modules/ai/ai.module.js';
+import { AuditModule } from './modules/audit/audit.module.js';
+import { OnboardingModule } from './modules/onboarding/onboarding.module.js';
+import { PrivacyModule } from './modules/privacy/privacy.module.js';
+import { ReportsModule } from './modules/reports/reports.module.js';
 import { AutomationModule } from './modules/automation/automation.module.js';
 import { BillingModule } from './modules/billing/plan.service.js';
 import { LegalModule } from './modules/legal/legal.module.js';
@@ -38,7 +43,7 @@ class HealthController {
 
 /** Monolito modular: cada módulo de /modules es un bounded context (screaming architecture). */
 @Module({
-  imports: [ConfigModule, ObservabilityModule, DatabaseModule, QueueModule, MailModule, DomainEventsModule, StorageModule, BillingModule, IdentityModule, TenancyModule, TeamModule, ContactsModule, PipelineModule, RealtimeModule, LegalModule, WhatsAppModule, TasksModule, AutomationModule, MarketingModule],
+  imports: [ConfigModule, ObservabilityModule, DatabaseModule, QueueModule, MailModule, DomainEventsModule, StorageModule, BillingModule, IdentityModule, TenancyModule, TeamModule, ContactsModule, PipelineModule, RealtimeModule, LegalModule, WhatsAppModule, TasksModule, AutomationModule, MarketingModule, AiModule, AuditModule, PrivacyModule, OnboardingModule, ReportsModule],
   controllers: [HealthController],
 })
 export class AppModule implements NestModule {

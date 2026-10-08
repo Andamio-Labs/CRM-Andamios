@@ -5,6 +5,7 @@ import { contacts } from '../../../shared/database/schema.js';
 import { badRequest } from '../../../shared/http/errors.js';
 import type { AuthContext } from '../../identity/infrastructure/http/session.guard.js';
 import { TenantContext } from '../../tenancy/application/tenant-context.js';
+import { recordConsent } from './consents.service.js';
 import { ContactsService } from './contacts.service.js';
 
 export const timelineQuerySchema = z.object({
@@ -70,6 +71,11 @@ export class TimelineService {
         ? { whatsappOptInAt: new Date(), whatsappOptInSource: source, whatsappOptOutAt: null }
         : { whatsappOptOutAt: new Date() };
       await tx.update(contacts).set(changes).where(eq(contacts.id, contactId));
+      // E13-S02 — El permiso de plantillas de WhatsApp es la finalidad "marketing" por ese canal.
+      await recordConsent(tx, {
+        tenantId: auth.tenantId, contactId, legalBasis: 'consent', purposes: ['marketing'], granted: optIn,
+        channel: 'whatsapp', evidence: `Registro manual (${source})`, recordedBy: auth.userId,
+      });
       return this.contactsService.findVisible(tx, auth, contactId);
     });
   }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CustomFieldType } from '../../../shared/database/schema.js';
+import { currentConsents } from './consent.js';
 import { validateCustomFieldValues } from './custom-fields.js';
 import { normalizePhone } from './phone.js';
 
@@ -52,5 +53,18 @@ describe('validateCustomFieldValues (E02-S04)', () => {
     ['texto gigante', { ciudad: 'x'.repeat(1001) }],
   ])('rechaza %s', (_, values) => {
     expect(() => validateCustomFieldValues(defs, values)).toThrow();
+  });
+});
+
+describe('currentConsents (E13-S02)', () => {
+  const at = (iso: string) => new Date(iso);
+  it('cada finalidad toma su registro más reciente, sin importar el orden de llegada', () => {
+    const current = currentConsents([
+      { purposes: ['marketing'], granted: false, recordedAt: at('2026-03-01'), legalBasis: 'consent', channel: 'phone' },
+      { purposes: ['sales', 'marketing'], granted: true, recordedAt: at('2026-01-01'), legalBasis: 'consent', channel: 'web_form' },
+    ]);
+    expect(current.sales).toMatchObject({ granted: true, channel: 'web_form' });
+    expect(current.marketing).toMatchObject({ granted: false, channel: 'phone' });
+    expect(current.billing).toBeUndefined();
   });
 });

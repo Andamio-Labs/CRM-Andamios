@@ -9,17 +9,21 @@ Leyenda: `[x]` hecha · `[~]` parcial (ver nota) · `[ ]` pendiente · ⏸ difer
 <!-- progreso -->
 | Fase | Hechas | Puntos hechos |
 |---|---|---|
-| MVP | 29 / 65 (+7 parciales) | 153 / 386 |
-| Fase-2 | 0 / 41 | 0 / 298 |
+| MVP | 47 / 65 (+11 parciales) | 255 / 386 |
+| Fase-2 | 1 / 41 | 3 / 298 |
 | Fase-3 | 0 / 21 | 0 / 264 |
-| **Total** | **29 / 127** | **153 / 948** |
+| **Total** | **48 / 127** | **258 / 948** |
 <!-- /progreso -->
 
-Última actualización: 2026-10-06 · Tests: 308 API + 42 web, todos en verde. Sprints 0 a 4 cerrados. Auditoría: `anti-slop/audit-001-2026-10-06.md`.
+Última actualización: 2026-10-08 · Tests: 456 API + 45 web, todos en verde. Sprints 0 a 5 y 8 cerrados; Sprints 6 y 7 con lo no-IA hecho (E10-S03 Wompi falta validar en sandbox).
 
 ## Decisiones que modifican el backlog
 
 - **Local-first (2026-10-06):** todo se desarrolla y corre en local con Docker Compose. Lo que es despliegue (Terraform, staging/prod, zero-downtime, TLS de borde, backups en la nube) queda ⏸ hasta tener un avance grande. Las stories afectadas se marcan `[~]` con la parte local hecha.
+
+- **Pasarela de pago (2026-10-08):** Wompi. **Consentimiento de marketing por WhatsApp:** queda como está (escribir primero habilita plantillas); se revisa con la gestión ante Meta.
+
+- **IA al final (2026-10-08):** el proveedor de LLM será probablemente Groq o DeepSeek (por costo) y los embeddings, un modelo local. Hasta entonces, las stories de E05 se construyen sin IA detrás de los puertos `LlmProvider` (y luego `Embedder`); las que solo son IA quedan ⏸. Se sigue con lo no-IA de los sprints 6 a 9.
 
 - **Stories extra** detectadas en el análisis (no están en el CSV) al final del archivo, con prefijo `X`.
 
@@ -113,43 +117,69 @@ Leyenda: `[x]` hecha · `[~]` parcial (ver nota) · `[ ]` pendiente · ⏸ difer
 
 ## Sprint 5 — MVP · 45 pts
 
-- [ ] **E06-S01** (5p) CRUD de tareas vinculadas — _Vinculadas a contacto o negocio, con responsable, vencimiento y estado._
-- [ ] **E06-S02** (5p) Recordatorios y notificaciones — _Aviso in-app y por correo al vencimiento; el usuario elige la anticipación._
-- [ ] **E02-S02** (5p) Detección y fusión de duplicados — _Al crear un contacto con teléfono o correo existente se advierte; la fusión conserva conversaciones, negocios y tareas._
-- [ ] **E02-S08** (8p) Importación CSV con mapeo — _Carga de hasta 50 000 filas; mapeo de columnas; vista previa; reporte descargable de filas con error._
-- [ ] **E02-S09** (3p) Exportación de datos CSV — _El propietario exporta contactos, negocios y tareas en cualquier momento; el evento queda en auditoría._
-- [ ] **E09-S01** (3p) Enlace y botón Click-to-WhatsApp con UTM — _Generador de enlaces con parámetros; el origen y la campaña se guardan en el contacto._
-- [ ] **E10-S01** (8p) Planes y límites configurables — _Límites por plan: usuarios, canales, cuota de IA y almacenamiento; se aplican en toda la plataforma._
-- [ ] **E07-S01** (8p) Reglas predefinidas del MVP — _Cuatro reglas activables: lead nuevo → asignar y crear tarea; sin respuesta en X horas → recordatorio; cambio de etapa → enviar plantilla; negocio ganado → notificar. Con registro de ejecuciones._
+- [x] **E06-S01** (5p) CRUD de tareas vinculadas — _Vinculadas a contacto o negocio, con responsable, vencimiento y estado._
+  - ✔ `/api/v1/tasks` vinculadas a negocio o contacto, responsable del equipo, vencimiento y estado (abiertas, vencidas, hechas); filtros mías/sin asignar; vista agrupada por semana. Tests: `tasks.spec.ts`.
+- [x] **E06-S02** (5p) Recordatorios y notificaciones — _Aviso in-app y por correo al vencimiento; el usuario elige la anticipación._
+  - ✔ Aviso in-app (campana) y por correo con la anticipación elegida, una sola vez; se reprograma si cambia el vencimiento; atajos "En una hora", "Mañana 9:00", "En una semana".
+- [x] **E02-S02** (5p) Detección y fusión de duplicados — _Al crear un contacto con teléfono o correo existente se advierte; la fusión conserva conversaciones, negocios y tareas._
+  - ✔ Advertencia al crear con teléfono o correo existente (`allowDuplicate` para forzar); la fusión conserva negocios, tareas y conversaciones, completa datos y borra el duplicado.
+- [x] **E02-S08** (8p) Importación CSV con mapeo — _Carga de hasta 50 000 filas; mapeo de columnas; vista previa; reporte descargable de filas con error._
+  - ✔ Importación CSV hasta 50.000 filas: mapeo sugerido, vista previa, reporte descargable de errores; solo propietario/admin; 5.000 filas < 15 s. Tests: `import-export.spec.ts`.
+- [x] **E02-S09** (3p) Exportación de datos CSV — _El propietario exporta contactos, negocios y tareas en cualquier momento; el evento queda en auditoría._
+  - ✔ `/api/v1/exports/{contacts,deals,tasks}.csv` solo propietario; queda en `audit_log`; neutraliza fórmulas (inyección CSV en Excel).
+- [x] **E09-S01** (3p) Enlace y botón Click-to-WhatsApp con UTM — _Generador de enlaces con parámetros; el origen y la campaña se guardan en el contacto._
+  - ✔ Generador de enlaces con UTM en Configuración; la redirección cuenta clics y atribuye origen y campaña al contacto. Tests: `automation-plans.spec.ts`.
+- [~] **E10-S01** (8p) Planes y límites configurables — _Límites por plan: usuarios, canales, cuota de IA y almacenamiento; se aplican en toda la plataforma._
+  - ✅ Límites por plan aplicados: usuarios (cuenta invitaciones pendientes), números de WhatsApp y almacenamiento; uso visible. ⏳ La cuota de IA (`aiRepliesPerMonth`) está definida pero se aplica con E05-S06.
+- [x] **E07-S01** (8p) Reglas predefinidas del MVP — _Cuatro reglas activables: lead nuevo → asignar y crear tarea; sin respuesta en X horas → recordatorio; cambio de etapa → enviar plantilla; negocio ganado → notificar. Con registro de ejecuciones._
+  - ✔ Las 4 reglas activables (lead nuevo → asignación por turnos + tarea; sin respuesta en X horas; cambio de etapa → plantilla; ganado → notificar) con registro de ejecuciones; solo propietario/admin configuran.
 
 ## Sprint 6 — MVP · 47 pts
 
-- [ ] **E05-S01** (5p) Configuración del agente — _Nombre, tono, idioma, horario de atención e instrucciones del negocio editables; vista previa en un simulador._
-- [ ] **E05-S02** (8p) Base de conocimiento — _Carga de FAQ, texto, PDF y URL; indexación vectorial (pgvector); estado de indexación visible._
+- [~] **E05-S01** (5p) Configuración del agente — _Nombre, tono, idioma, horario de atención e instrucciones del negocio editables; vista previa en un simulador._
+  - ✅ `/api/v1/ai/agent`: nombre, tono, idioma, horario (siempre / horario laboral / fuera de horario) e instrucciones; solo propietario/admin. Simulador `POST /ai/agent/preview` muestra el prompt armado (`buildAgentPrompt`, reglas fijas al final). Puerto `LlmProvider` con `NotConfiguredLlm`: no se puede activar sin IA (409 `AI_NOT_CONFIGURED`). ⏳ Respuesta real del simulador al conectar el proveedor.
+- [~] **E05-S02** (8p) Base de conocimiento — _Carga de FAQ, texto, PDF y URL; indexación vectorial (pgvector); estado de indexación visible._
+  - ✅ `/api/v1/ai/knowledge`: FAQ y texto (hasta 100.000 caracteres), troceado por párrafos y oraciones (`chunking.ts`), estado visible (esperando IA / indexando / lista / con error). ⏳ PDF (dependencia `unpdf`), URL (requiere guardia SSRF) y embeddings en pgvector: la columna se agrega cuando se elija el modelo.
 - [ ] **E05-S03** (13p) Respuestas automáticas con RAG en WhatsApp — _Responde solo con información de la base; si no sabe, escala a humano; latencia p95 menor a 10 s._
+  - ⏸ IA al final del MVP (decisión 2026-10-08).
 - [ ] **E05-S06** (5p) Cuotas y control de costos — _Cuota mensual de respuestas por plan; contador visible; alertas al 80 % y 100 %; bloqueo configurable._
+  - ⏸ IA al final del MVP (decisión 2026-10-08).
 - [ ] **E05-S07** (8p) Guardrails y seguridad del agente — _Defensa ante prompt injection, no revela instrucciones internas, no promete precios o descuentos no autorizados, filtra datos sensibles._
+  - ⏸ IA al final del MVP (decisión 2026-10-08).
 - [ ] **E05-S08** (3p) Registro de conversaciones de IA — _Guarda prompt, respuesta, modelo, tokens y costo por mensaje; consultable por el propietario._
-- [ ] **E13-S02** (5p) Consentimiento y finalidad por contacto — _Guarda base legal, finalidad y fecha del consentimiento de cada contacto._
+  - ⏸ IA al final del MVP (decisión 2026-10-08).
+- [x] **E13-S02** (5p) Consentimiento y finalidad por contacto — _Guarda base legal, finalidad y fecha del consentimiento de cada contacto._
+  - ✔ `contact_consents` append-only (la app no puede editar ni borrar): base legal (Ley 1581), finalidades, canal, evidencia, quién y cuándo; estado actual por finalidad. BAJA/ALTA y el primer mensaje de WhatsApp quedan en el historial; la fusión copia el historial del duplicado. UI en la ficha del contacto. Tests: `privacy-consent.spec.ts`.
 
 ## Sprint 7 — MVP · 47 pts
 
 - [ ] **E05-S04** (8p) Calificación del lead — _Captura nombre, interés, presupuesto u otros campos definidos y los guarda en contacto y negocio._
 - [ ] **E05-S05** (5p) Traspaso a humano y pausa — _La IA se pausa cuando un vendedor responde; botón de pausar/reanudar; palabras de escalamiento ("asesor", "humano")._
-- [ ] **E08-S01** (8p) Panel básico — _Leads nuevos, negocios por etapa, tasa de conversión y valor del pipeline, con rango de fechas._
-- [ ] **E08-S02** (5p) Primera respuesta y SLA — _Tiempo promedio de primera respuesta por vendedor y alertas al superar el SLA definido._
-- [ ] **E08-S03** (5p) Rendimiento por vendedor y por fuente — _Negocios, ingresos y conversión por responsable y por canal de origen._
-- [ ] **E08-S04** (3p) Analítica de producto interna — _Eventos de activación (registro, conexión de WhatsApp, primer lead) para medir el embudo propio._
-- [ ] **E10-S03** (13p) Suscripción recurrente en COP — _Cobro con pasarela local (Wompi, Mercado Pago o PayU); procesa webhooks de pago; reintentos ante fallos; estados de cuenta claros._
+- [x] **E08-S01** (8p) Panel básico — _Leads nuevos, negocios por etapa, tasa de conversión y valor del pipeline, con rango de fechas._
+  - ✔ `GET /api/v1/reports/overview`: leads nuevos, negocios abiertos por etapa, valor del embudo, ganados/perdidos y conversión, con rango de fechas en la zona de la empresa. El vendedor ve solo sus números. UI `/reports`. Tests: `reports.spec.ts`.
+- [x] **E08-S02** (5p) Primera respuesta y SLA — _Tiempo promedio de primera respuesta por vendedor y alertas al superar el SLA definido._
+  - ✔ `GET /api/v1/reports/response-times`: primera respuesta HUMANA (las automáticas no cuentan) por persona, fuera de SLA y sin responder; SLA configurable (`firstResponseSlaMinutes`); alerta `sla_breach` una sola vez por conversación (barrido cada 5 min).
+- [x] **E08-S03** (5p) Rendimiento por vendedor y por fuente — _Negocios, ingresos y conversión por responsable y por canal de origen._
+  - ✔ `GET /api/v1/reports/performance`: negocios, ganados, ingresos y conversión por responsable y por fuente (leads + negocios).
+- [x] **E08-S04** (3p) Analítica de producto interna — _Eventos de activación (registro, conexión de WhatsApp, primer lead) para medir el embudo propio._
+  - ✔ `GET /api/internal/activation-funnel` (exige `METRICS_TOKEN`): registro → WhatsApp conectado → primer lead → primer negocio ganado, por cohorte, con medianas de horas. Solo agregados, sin datos de empresas. Tests: `product-analytics.spec.ts`.
+- [~] **E10-S03** (13p) Suscripción recurrente en COP — _Cobro con pasarela local (Wompi, Mercado Pago o PayU); procesa webhooks de pago; reintentos ante fallos; estados de cuenta claros._
+  - ✅ Wompi: tarjeta tokenizada en el navegador → fuente de pago con aceptaciones (`/merchants/info`); cobro recurrente firmado (integridad); webhook `/api/webhooks/wompi` con checksum en tiempo constante, idempotente y que valida monto; renovación horaria; reintentos +1/+3/+5 días → `past_due` → `read_only` sin perder datos; avisos al propietario; historial de pagos. Referencia determinística + un solo cobro pendiente por empresa (nunca cobra dos veces). Doc: `docs/billing.md`. Tests: `billing.spec.ts`. ⏳ Validar contra el sandbox real con llaves de Wompi; precios de `plans.ts` PROVISIONALES.
 
 ## Sprint 8 — MVP · 39 pts
 
-- [ ] **E13-S03** (8p) Derechos del titular — _Consulta, actualización, supresión y exportación de los datos de un contacto atendidos desde la plataforma._
-- [ ] **E13-S04** (5p) Eliminación de la empresa y sus datos — _Un botón con doble confirmación elimina todo; purga en backups según política documentada._
-- [ ] **E13-S06** (8p) Registro de auditoría — _Quién vio, modificó, exportó o eliminó datos; consultable y no editable._
-- [ ] **E14-S03** (8p) Onboarding guiado — _Lista de pasos: conectar WhatsApp, elegir plantilla de embudo, importar contactos e invitar al equipo; medir el avance._
-- [ ] **E14-S04** (5p) Notificaciones y preferencias — _Notificaciones in-app y por correo configurables por tipo de evento._
-- [ ] **E10-S02** (5p) Prueba gratuita sin tarjeta — _Duración configurable (14 o 30 días); al vencer, la cuenta queda en solo lectura sin perder datos._
+- [x] **E13-S03** (8p) Derechos del titular — _Consulta, actualización, supresión y exportación de los datos de un contacto atendidos desde la plataforma._
+  - ✔ Solicitudes con plazo legal (consulta/exportación 10 días hábiles, corrección/supresión 15) en `/api/v1/privacy/requests`; exportación JSON completa del titular; supresión que anonimiza, borra conversaciones, archivos y tareas, y conserva negocios sin datos personales y la prueba de consentimiento. Permiso `privacy:manage`; funciona en solo lectura. Doc: `docs/eliminacion-de-datos.md`. Tests: `privacy-rights.spec.ts`.
+- [x] **E13-S04** (5p) Eliminación de la empresa y sus datos — _Un botón con doble confirmación elimina todo; purga en backups según política documentada._
+  - ✔ Doble confirmación (código de 6 dígitos por correo, 30 min, 5 intentos + nombre exacto). `purge_tenant()` borra todo en cascada, archivos y usuarios sin otra empresa; solo puede borrar el tenant activo. `restore.sh` con `LIVE_DATABASE` reaplica las eliminaciones (probado). Política de backups en `docs/eliminacion-de-datos.md`. Tests: `tenant-deletion.spec.ts`, `backup-restore.spec.ts`.
+- [x] **E13-S06** (8p) Registro de auditoría — _Quién vio, modificó, exportó o eliminó datos; consultable y no editable._
+  - ✔ Interceptor global: toda mutación y toda vista de datos personales (`@AuditView`) queda con quién, acción, entidad, NOMBRES de campos (nunca valores) e IP. `GET /api/v1/audit` solo propietario, con filtros y cursor; append-only. UI en Configuración. Tests: `audit.spec.ts`.
+- [x] **E14-S03** (8p) Onboarding guiado — _Lista de pasos: conectar WhatsApp, elegir plantilla de embudo, importar contactos e invitar al equipo; medir el avance._
+  - ✔ `/api/v1/onboarding`: 4 pasos DERIVADOS de los datos (WhatsApp, embudo, importación, equipo) con fecha y avance %; plantillas de embudo por sector; se puede ocultar. Guía en el Inicio. Tests: `onboarding.spec.ts`.
+- [x] **E14-S04** (5p) Notificaciones y preferencias — _Notificaciones in-app y por correo configurables por tipo de evento._
+  - ✔ Preferencias por persona y tipo (app / correo); con la campana apagada el aviso no se ve pero el correo puede salir; el correo de cobros no se puede apagar. UI en Configuración. Tests: `notification-preferences.spec.ts`.
+- [x] **E10-S02** (5p) Prueba gratuita sin tarjeta — _Duración configurable (14 o 30 días); al vencer, la cuenta queda en solo lectura sin perder datos._
+  - ✔ `TRIAL_DAYS` configurable; `account_status()` hace efectiva la solo lectura al vencer aunque el barrido no haya corrido; `SessionGuard` bloquea toda mutación (402 `ACCOUNT_READ_ONLY`) salvo lo marcado `@AllowWhenReadOnly` (pagar, derechos del titular, eliminar empresa). Aviso en todas las pantallas. Tests: `trial.spec.ts`.
 
 ## Sprint 9 — MVP · 5 pts
 
@@ -173,7 +203,8 @@ Leyenda: `[x]` hecha · `[~]` parcial (ver nota) · `[ ]` pendiente · ⏸ difer
 - [ ] **E04-S15** (13p) Correo electrónico en la tarjeta — _Conexión OAuth con Gmail y Microsoft 365; los correos se asocian al contacto; se responde desde el CRM._
 - [ ] **E02-S10** (5p) Búsqueda tolerante a errores — _Encuentra clientes con errores de escritura y por los últimos dígitos del teléfono (pg_trgm)._
 - [ ] **E03-S05** (5p) Campos obligatorios por etapa — _No permite avanzar si faltan campos requeridos; el mensaje indica cuáles._
-- [ ] **E03-S06** (3p) Plantillas de embudo por sector — _Plantillas para clínica, inmobiliaria, educación, comercio y servicios; se aplican en el onboarding._
+- [x] **E03-S06** (3p) Plantillas de embudo por sector — _Plantillas para clínica, inmobiliaria, educación, comercio y servicios; se aplican en el onboarding._
+  - ✔ Adelantada con el onboarding (E14-S03): plantillas general, clínica, inmobiliaria, educación, comercio y servicios; con el embudo inicial vacío lo transforma, si no crea uno nuevo.
 
 ## Sprint 12 — Fase-2 · 45 pts
 
@@ -264,7 +295,8 @@ Leyenda: `[x]` hecha · `[~]` parcial (ver nota) · `[ ]` pendiente · ⏸ difer
 - [ ] **X-04** (3p) Fallback de proveedor LLM.
 - [ ] **X-05** (2p) Datos demo / seed para onboarding y desarrollo local.
 - [ ] **X-06** (8p) ❓ Propuestas comerciales `.docx` con etiquetas del negocio (visto en la referencia, sin épica en el backlog). Pendiente de aprobación del dueño.
-- [ ] **X-07** (5p) Brechas de la referencia que entran en este ciclo: datos de cliente (origen, prioridad, tipo, alta con negocio), tablero (búsqueda, mis leads, tarjeta completa, columnas desde UI, vista lista), búsqueda Ctrl+K, dashboard "lo que importa ahora". Ver `docs/GAP-REFERENCIA.md`.
+- [x] **X-07** (5p) Brechas de la referencia que entran en este ciclo: datos de cliente (origen, prioridad, tipo, alta con negocio), tablero (búsqueda, mis leads, tarjeta completa, columnas desde UI, vista lista), búsqueda Ctrl+K, dashboard "lo que importa ahora". Ver `docs/GAP-REFERENCIA.md`.
+  - ✔ Tests: `reference-gaps.spec.ts`, dashboard en `tasks.spec.ts`; paleta de búsqueda en `shell-widgets.tsx`.
 
 ## Índice de épicas
 

@@ -3,6 +3,7 @@
 #
 #   restore.sh <archivo.dump.gpg> <base_destino>
 #   Requiere: PGHOST PGUSER PGPASSWORD BACKUP_PASSPHRASE
+#   Opcional: LIVE_DATABASE=<base viva> reaplica las empresas eliminadas DESPUÉS del backup (E13-S04).
 #
 # Restaurar en otra base permite verificar el backup sin tocar producción.
 # Para un desastre real: restaurar acá, validar, y recién ahí apuntar la app.
@@ -29,4 +30,21 @@ psql --no-password -d "$target_db" -v ON_ERROR_STOP=1 -qc \
   "CREATE EXTENSION IF NOT EXISTS citext; CREATE EXTENSION IF NOT EXISTS unaccent;
    CREATE EXTENSION IF NOT EXISTS pg_trgm; CREATE EXTENSION IF NOT EXISTS vector;"
 pg_restore --no-password --exit-on-error --dbname="$target_db" "$plain"
+
+# E13-S04 — Una empresa eliminada no puede "revivir" por restaurar un backup anterior a su eliminación.
+# La lista sale de la base VIVA (la del backup no conoce las eliminaciones posteriores).
+if [[ -n "${LIVE_DATABASE:-}" ]]; then
+  purged=0
+  while IFS= read -r tenant; do
+    [[ -z "$tenant" ]] && continue
+    psql --no-password -d "$target_db" -v ON_ERROR_STOP=1 -q -v tid="$tenant" <<'SQL'
+BEGIN;
+SELECT set_config('app.tenant_id', :'tid', true);
+SELECT purge_tenant(:'tid') WHERE EXISTS (SELECT 1 FROM organization WHERE id = :'tid');
+COMMIT;
+SQL
+    purged=$((purged + 1))
+  done < <(psql --no-password -d "$LIVE_DATABASE" -tAc "SELECT organization_id FROM tenant_deletions")
+  echo "eliminaciones reaplicadas: $purged"
+fi
 echo "restore OK: $file → $target_db"

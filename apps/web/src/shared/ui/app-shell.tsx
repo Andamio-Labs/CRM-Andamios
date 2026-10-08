@@ -3,9 +3,9 @@ import type { ReactNode } from 'react';
 import { authClient } from '../auth-client';
 import { useRegion } from '../i18n/use-region';
 import type { MessageKey } from '../i18n/messages';
-import { CommandPalette, NotificationsBell } from './shell-widgets';
+import { AccountBanner, CommandPalette, NotificationsBell } from './shell-widgets';
 
-type NavTo = '/' | '/tasks' | '/deals' | '/inbox' | '/contacts' | '/team' | '/settings';
+type NavTo = '/' | '/tasks' | '/reports' | '/deals' | '/inbox' | '/contacts' | '/team' | '/settings';
 
 const MAIN_NAV: { to: NavTo; label: MessageKey }[] = [
   { to: '/', label: 'nav.home' },
@@ -13,6 +13,7 @@ const MAIN_NAV: { to: NavTo; label: MessageKey }[] = [
   { to: '/inbox', label: 'nav.inbox' },
   { to: '/contacts', label: 'nav.contacts' },
   { to: '/tasks', label: 'nav.tasks' },
+  { to: '/reports', label: 'nav.reports' },
 ];
 
 const TEAM_NAV: { to: NavTo; label: MessageKey }[] = [
@@ -26,6 +27,7 @@ const NAV_ICONS: Record<NavTo, string> = {
   '/inbox': '▤',
   '/contacts': '♙',
   '/tasks': '☑',
+  '/reports': '▥',
   '/team': '♧',
   '/settings': '⚙',
 };
@@ -106,6 +108,7 @@ export function AppShell({ title, subtitle, wide, children }: { title: string; s
           </nav>
         </header>
         <main className={`mx-auto ${width} px-3 py-4 sm:px-5 sm:py-5`}>
+          <AccountBanner />
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h1 className="text-xl font-semibold tracking-tight text-ink">{title}</h1>

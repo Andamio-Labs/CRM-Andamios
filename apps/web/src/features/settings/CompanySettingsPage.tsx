@@ -2,6 +2,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type FormEvent, useState } from 'react';
 import { api, ApiError } from '../../shared/api';
 import { AppShell } from '../../shared/ui/app-shell';
+import { AgentSettings } from './AgentSettings';
+import { AuditSettings } from './AuditSettings';
+import { BillingSettings } from './BillingSettings';
+import { DangerZone } from './DangerZone';
+import { NotificationSettings } from './NotificationSettings';
+import { PrivacySettings } from './PrivacySettings';
 import { GrowthSettings } from './GrowthSettings';
 import { MessagingSettings } from './MessagingSettings';
 import { WhatsAppSettings } from './WhatsAppSettings';
@@ -55,9 +61,15 @@ export function CompanySettingsPage() {
             onSave={(body) => save.mutate(body)}
           />
         )}
+      <NotificationSettings />
       <WhatsAppSettings />
       <MessagingSettings />
       <GrowthSettings />
+      <AgentSettings />
+      <BillingSettings />
+      <PrivacySettings />
+      <AuditSettings />
+      <DangerZone />
     </AppShell>
   );
 }

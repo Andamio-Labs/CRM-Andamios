@@ -24,6 +24,7 @@ const MATRIX = {
   'reports:read-team': { owner: true, admin: true, member: false, label: 'Ver reportes de todo el equipo' },
   'data:import': { owner: true, admin: true, member: false, label: 'Importar contactos (CSV)' },
   'data:export': { owner: true, admin: false, member: false, label: 'Exportar datos (CSV)' },
+  'privacy:manage': { owner: true, admin: true, member: false, label: 'Atender derechos del titular (consulta, exportación, supresión)' },
   'audit:read': { owner: true, admin: false, member: false, label: 'Ver registro de auditoría' },
   'billing:manage': { owner: true, admin: false, member: false, label: 'Gestionar plan y pagos' },
   'tenant:delete': { owner: true, admin: false, member: false, label: 'Eliminar la empresa y sus datos' },

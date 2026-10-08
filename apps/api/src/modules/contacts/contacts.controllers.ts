@@ -1,10 +1,12 @@
 import { Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, Patch, Post, Put, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { AuditView, NoAudit } from '../../shared/http/audit.js';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { ZodBody, ZodQuery } from '../../shared/http/zod-validation.pipe.js';
 import { type AuthContext, CurrentAuth, PermissionGuard, RequirePermission, SessionGuard } from '../identity/infrastructure/http/session.guard.js';
 import { CompaniesService, companySchema, linkSchema } from './application/companies.service.js';
+import { ConsentsService, recordConsentSchema } from './application/consents.service.js';
 import { ContactsService, createContactRequestSchema, listContactsSchema, updateContactSchema } from './application/contacts.service.js';
 import { createFieldSchema, CustomFieldsService, entitySchema, updateFieldSchema } from './application/custom-fields.service.js';
 import { DataTransferService, exportEntitySchema, startImportSchema } from './application/data-transfer.service.js';
@@ -20,6 +22,7 @@ export class ContactsController {
   constructor(
     private readonly contacts: ContactsService,
     private readonly timelineService: TimelineService,
+    private readonly consents: ConsentsService,
   ) {}
 
   @Get() @RequirePermission('records:read')
@@ -32,7 +35,7 @@ export class ContactsController {
     return this.contacts.stats(auth);
   }
 
-  @Get(':id') @RequirePermission('records:read')
+  @Get(':id') @AuditView() @RequirePermission('records:read')
   get(@CurrentAuth() auth: AuthContext, @Param('id') id: string) {
     return this.contacts.get(auth, id);
   }
@@ -42,7 +45,7 @@ export class ContactsController {
     return this.contacts.create(auth, body);
   }
 
-  @Post(':id/merge') @HttpCode(HttpStatus.OK) @RequirePermission('records:delete')
+  @Post(':id/merge') @HttpCode(HttpStatus.OK) @NoAudit() @RequirePermission('records:delete')
   merge(@CurrentAuth() auth: AuthContext, @Param('id') id: string, @ZodBody(mergeSchema) body: z.infer<typeof mergeSchema>) {
     return this.contacts.merge(auth, id, body.duplicateId);
   }
@@ -57,7 +60,7 @@ export class ContactsController {
     return this.contacts.remove(auth, id);
   }
 
-  @Get(':id/timeline') @RequirePermission('records:read')
+  @Get(':id/timeline') @AuditView() @RequirePermission('records:read')
   timeline(@CurrentAuth() auth: AuthContext, @Param('id') id: string, @ZodQuery(timelineQuerySchema) query: z.infer<typeof timelineQuerySchema>) {
     return this.timelineService.timeline(auth, id, query);
   }
@@ -65,6 +68,16 @@ export class ContactsController {
   @Patch(':id/consent') @RequirePermission('records:write')
   consent(@CurrentAuth() auth: AuthContext, @Param('id') id: string, @ZodBody(consentSchema) body: z.infer<typeof consentSchema>) {
     return this.timelineService.consent(auth, id, body);
+  }
+
+  @Get(':id/consents') @AuditView() @RequirePermission('records:read')
+  listConsents(@CurrentAuth() auth: AuthContext, @Param('id') id: string) {
+    return this.consents.list(auth, id);
+  }
+
+  @Post(':id/consents') @RequirePermission('records:write')
+  recordConsent(@CurrentAuth() auth: AuthContext, @Param('id') id: string, @ZodBody(recordConsentSchema) body: z.infer<typeof recordConsentSchema>) {
+    return this.consents.record(auth, id, body);
   }
 }
 
@@ -78,7 +91,7 @@ export class CompaniesController {
     return this.companies.list(auth);
   }
 
-  @Get(':id') @RequirePermission('records:read')
+  @Get(':id') @AuditView() @RequirePermission('records:read')
   get(@CurrentAuth() auth: AuthContext, @Param('id') id: string) {
     return this.companies.get(auth, id);
   }

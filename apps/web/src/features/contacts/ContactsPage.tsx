@@ -6,6 +6,8 @@ import { authClient } from '../../shared/auth-client';
 import { useRegion } from '../../shared/i18n/use-region';
 import { AppShell } from '../../shared/ui/app-shell';
 import { Alert, Button, Field } from '../../shared/ui/form';
+import { ContactConsents } from './ContactConsents';
+import { ContactPrivacy } from './ContactPrivacy';
 import { ContactTimeline } from './ContactTimeline';
 import { ImportWizard } from './ImportWizard';
 import { useDebouncedValue } from '../../shared/use-debounced-value';
@@ -32,6 +34,8 @@ export function ContactsPage() {
   const [q, setQ] = useState('');
   const [mine, setMine] = useState(false);
   const [openId, setOpenId] = useState<string | undefined>(search.open);
+  // Solo propietario y admin ven el equipo: el mismo 403 indica quién atiende derechos del titular.
+  const canManagePrivacy = useQuery({ queryKey: ['members'], queryFn: () => api<{ userId: string; role: string }[]>('/api/v1/members'), retry: false, staleTime: 60_000 }).isSuccess;
   const [importing, setImporting] = useState(false);
   const query = useDebouncedValue(q.trim());
   const searching = query.length >= 2;
@@ -97,7 +101,7 @@ export function ContactsPage() {
                     <td className="px-4 py-2.5">{c.priority ? <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${PRIORITY[c.priority]!.className}`}>{PRIORITY[c.priority]!.label}</span> : <span className="text-xs text-muted">Sin prioridad</span>}</td>
                     <td className="px-4 py-2.5 text-xs text-muted">{c.createdAt ? date(c.createdAt) : ''}</td>
                   </tr>
-                  {openId === c.id && <tr><td colSpan={5} className="px-3 pb-4"><ContactTimeline contactId={c.id} /></td></tr>}
+                  {openId === c.id && <tr><td colSpan={5} className="px-3 pb-4"><div className="flex flex-col gap-5"><ContactTimeline contactId={c.id} /><ContactConsents contactId={c.id} />{canManagePrivacy && <ContactPrivacy contactId={c.id} contactName={c.name} />}</div></td></tr>}
                 </Fragment>
               ))}
             </tbody>

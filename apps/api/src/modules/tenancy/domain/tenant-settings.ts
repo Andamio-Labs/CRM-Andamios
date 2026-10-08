@@ -51,6 +51,7 @@ export const updateTenantSettingsSchema = z
     sellersSeeOnlyAssigned: z.boolean(),
     outOfHoursEnabled: z.boolean(),
     outOfHoursMessage: z.string().trim().min(1).max(1000),
+    firstResponseSlaMinutes: z.number().int().min(5).max(1440),
   })
   .partial()
   .strict();

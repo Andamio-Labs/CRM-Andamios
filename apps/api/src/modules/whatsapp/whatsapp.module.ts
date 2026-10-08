@@ -1,3 +1,4 @@
+import { AuditView } from '../../shared/http/audit.js';
 import {
   Controller, Delete, ForbiddenException, Get, HttpCode, HttpStatus, Inject, Module, Param, Patch, Post, Query, type RawBodyRequest,
   Req, UnauthorizedException, UseGuards,
@@ -102,7 +103,7 @@ class WhatsAppController {
   @Get('conversations/:id') @RequirePermission('records:read')
   conversation(@CurrentAuth() auth: AuthContext, @Param('id') id: string) { return this.messaging.get(auth, id); }
 
-  @Get('conversations/:id/messages') @RequirePermission('records:read')
+  @Get('conversations/:id/messages') @AuditView() @RequirePermission('records:read')
   messages(@CurrentAuth() auth: AuthContext, @Param('id') id: string) { return this.messaging.listMessages(auth, id); }
 
   @Post('conversations/:id/read') @HttpCode(HttpStatus.NO_CONTENT) @RequirePermission('records:read')

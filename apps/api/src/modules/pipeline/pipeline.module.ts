@@ -1,4 +1,5 @@
 import { Controller, Delete, Get, HttpCode, HttpStatus, Module, Param, Patch, Post, Put, UseGuards } from '@nestjs/common';
+import { AuditView } from '../../shared/http/audit.js';
 import type { z } from 'zod';
 import { ZodBody, ZodQuery } from '../../shared/http/zod-validation.pipe.js';
 import { ContactsModule } from '../contacts/contacts.module.js';
@@ -66,7 +67,7 @@ class DealsController {
   @Post() @RequirePermission('records:write')
   create(@CurrentAuth() auth: AuthContext, @ZodBody(createDealSchema) body: Body<typeof createDealSchema>) { return this.deals.create(auth, body); }
 
-  @Get(':id') @RequirePermission('records:read')
+  @Get(':id') @AuditView() @RequirePermission('records:read')
   get(@CurrentAuth() auth: AuthContext, @Param('id') id: string) { return this.deals.get(auth, id); }
 
   @Get(':id/events') @RequirePermission('records:read')
@@ -93,5 +94,6 @@ class DealsController {
   imports: [IdentityModule, TenancyModule, ContactsModule],
   controllers: [PipelinesController, DealsController],
   providers: [PipelinesService, DealsService],
+  exports: [PipelinesService],
 })
 export class PipelineModule {}

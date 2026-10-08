@@ -153,6 +153,9 @@ export class ContactsService {
       await tx.execute(sql`UPDATE tasks SET contact_id = ${id} WHERE contact_id = ${duplicateId}`);
       await tx.execute(sql`INSERT INTO contact_companies (tenant_id, contact_id, company_id, job_title)
         SELECT tenant_id, ${id}, company_id, job_title FROM contact_companies WHERE contact_id = ${duplicateId} ON CONFLICT DO NOTHING`);
+      // E13-S02 — El historial de consentimiento es append-only: se copia (no se mueve) antes de borrar el duplicado.
+      await tx.execute(sql`INSERT INTO contact_consents (tenant_id, contact_id, legal_basis, purposes, granted, channel, evidence, recorded_by, recorded_at)
+        SELECT tenant_id, ${id}, legal_basis, purposes, granted, channel, evidence, recorded_by, recorded_at FROM contact_consents WHERE contact_id = ${duplicateId}`);
       // Conversaciones por el mismo número: se unifican en la del principal.
       await tx.execute(sql`
         WITH pairs AS (
