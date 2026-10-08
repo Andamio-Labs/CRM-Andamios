@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../shared/api';
+import { SettingsSection, tableHeadClass } from '../../shared/ui/section';
 import { Alert } from '../../shared/ui/form';
 
 interface Preference { type: string; label: string; inApp: boolean; email: boolean; emailLocked: boolean }
@@ -16,27 +17,27 @@ export function NotificationSettings() {
   if (!prefs.data) return null;
 
   return (
-    <section className="mt-10" aria-labelledby="notif-title">
-      <h2 id="notif-title" className="text-lg font-semibold text-ink">Mis notificaciones</h2>
-      <p className="mt-1 text-sm text-muted">Elegí qué avisos te llegan a la campana y cuáles por correo. Solo te afecta a vos.</p>
-      <table className="mt-3 w-full text-left text-sm">
-        <thead className="text-xs text-muted"><tr><th scope="col" className="py-2">Aviso</th><th scope="col" className="w-20 text-center">En la app</th><th scope="col" className="w-20 text-center">Correo</th></tr></thead>
+    <SettingsSection icon="♪" title="Mis notificaciones" description="Elige qué avisos te llegan a la campana y cuáles por correo. Solo te afecta a ti.">
+      <div className="overflow-x-auto rounded-lg border border-line">
+      <table className="w-full text-left text-xs">
+        <thead className={tableHeadClass}><tr><th scope="col" className="px-3 py-2">Aviso</th><th scope="col" className="w-20 px-3 py-2 text-center">En la app</th><th scope="col" className="w-20 px-3 py-2 text-center">Correo</th></tr></thead>
         <tbody className="divide-y divide-line">
           {prefs.data.map((p) => (
             <tr key={p.type}>
-              <td className="py-2 text-ink">{p.label}</td>
+              <td className="px-3 py-2 text-ink">{p.label}</td>
               <td className="text-center">
-                <input type="checkbox" aria-label={`${p.label} en la app`} checked={p.inApp} onChange={(e) => save.mutate({ type: p.type, inApp: e.target.checked, email: p.email })} className="size-5 accent-honey" />
+                <input type="checkbox" aria-label={`${p.label} en la app`} checked={p.inApp} onChange={(e) => save.mutate({ type: p.type, inApp: e.target.checked, email: p.email })} className="size-4 accent-honey" />
               </td>
               <td className="text-center">
                 <input type="checkbox" aria-label={`${p.label} por correo`} checked={p.email} disabled={p.emailLocked} title={p.emailLocked ? 'Los avisos de plan y pagos siempre llegan por correo' : undefined}
-                  onChange={(e) => save.mutate({ type: p.type, inApp: p.inApp, email: e.target.checked })} className="size-5 accent-honey" />
+                  onChange={(e) => save.mutate({ type: p.type, inApp: p.inApp, email: e.target.checked })} className="size-4 accent-honey" />
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+      </div>
       {save.isError && <div className="mt-2"><Alert>No se pudo guardar.</Alert></div>}
-    </section>
+    </SettingsSection>
   );
 }

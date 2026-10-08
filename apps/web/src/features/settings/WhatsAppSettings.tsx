@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type FormEvent, useState } from 'react';
 import { api, ApiError } from '../../shared/api';
+import { SettingsSection } from '../../shared/ui/section';
 import { Alert, Button, Field } from '../../shared/ui/form';
 
 interface Channel {
@@ -38,15 +39,13 @@ export function WhatsAppSettings() {
   });
 
   return (
-    <section className="mt-10" aria-labelledby="wa-title">
-      <h2 id="wa-title" className="text-lg font-semibold text-ink">WhatsApp</h2>
-      <p className="mt-1 text-sm text-muted">Conecta el número de tu empresa para recibir y responder mensajes desde BeeCRM.</p>
+    <SettingsSection icon="✆" title="WhatsApp" description={<>Conecta el número de tu empresa para recibir y responder mensajes desde BeeCRM.</>}>
 
       {channels.isPending && <p className="mt-4 text-muted">Cargando…</p>}
       {channels.isError && <div className="mt-4"><Alert>No pudimos cargar los números conectados.</Alert></div>}
       <ul className="mt-4 flex flex-col gap-3">
         {channels.data?.map((c) => (
-          <li key={c.id} className="rounded-xl border border-line bg-surface p-4">
+          <li key={c.id} className="rounded-lg border border-line p-3">
             <p className="font-medium text-ink">{c.verifiedName ?? c.displayPhone ?? c.phoneNumberId}</p>
             <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-4">
               <dt className="text-muted">Número</dt><dd className="text-ink">{c.displayPhone ?? 'Sin dato'}</dd>
@@ -70,7 +69,7 @@ export function WhatsAppSettings() {
       </div>
       {connect.isError && <div className="mt-3"><Alert>{connect.error instanceof ApiError && connect.error.status !== 403 ? connect.error.message : 'Solo el propietario puede conectar números.'}</Alert></div>}
       {connect.isSuccess && <div className="mt-3"><Alert tone="success">Número conectado.</Alert></div>}
-    </section>
+    </SettingsSection>
   );
 }
 

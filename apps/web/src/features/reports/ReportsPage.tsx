@@ -4,6 +4,7 @@ import { api } from '../../shared/api';
 import { useRegion } from '../../shared/i18n/use-region';
 import { AppShell } from '../../shared/ui/app-shell';
 import { Alert } from '../../shared/ui/form';
+import { EmptyState, IconTile, inputClass, labelClass, Segmented, StatTile, tableHeadClass } from '../../shared/ui/section';
 
 interface Overview {
   newLeads: number;
@@ -21,7 +22,7 @@ interface ResponseTimes {
   overall: { conversations: number; avgMinutes: number | null; breaches: number; pending: number; pendingBreaches: number };
 }
 
-const RANGES = [['7', 'Últimos 7 días'], ['30', 'Últimos 30 días'], ['90', 'Últimos 90 días'], ['custom', 'Personalizado']] as const;
+const RANGES = [['7', '7 días'], ['30', '30 días'], ['90', '90 días'], ['custom', 'Personalizado']] as const;
 const isoDay = (d: Date) => d.toISOString().slice(0, 10);
 const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v * 100)} %`);
 const minutes = (v: number | null) => (v === null ? '—' : v < 60 ? `${Math.round(v)} min` : `${(v / 60).toFixed(1)} h`);
@@ -42,15 +43,12 @@ export function ReportsPage() {
 
   return (
     <AppShell title="Reportes" subtitle="Cómo viene el embudo, el equipo y la atención." wide>
-      <div className="mb-4 flex flex-wrap items-end gap-2" role="group" aria-label="Rango de fechas">
-        {RANGES.map(([value, label]) => (
-          <button key={value} onClick={() => setPreset(value)} aria-pressed={preset === value}
-            className={`min-h-11 rounded-full border px-4 text-sm ${preset === value ? 'border-ink bg-ink text-surface' : 'border-line text-ink'}`}>{label}</button>
-        ))}
+      <div className="mb-4 flex flex-wrap items-end gap-3">
+        <Segmented label="Rango de fechas" options={RANGES} value={preset} onChange={setPreset} />
         {preset === 'custom' && (
           <>
-            <label className="flex flex-col text-xs text-muted">Desde<input type="date" value={custom.from} max={custom.to} onChange={(e) => setCustom({ ...custom, from: e.target.value })} className="min-h-11 rounded-lg border border-line bg-surface px-3 text-sm text-ink" /></label>
-            <label className="flex flex-col text-xs text-muted">Hasta<input type="date" value={custom.to} min={custom.from} onChange={(e) => setCustom({ ...custom, to: e.target.value })} className="min-h-11 rounded-lg border border-line bg-surface px-3 text-sm text-ink" /></label>
+            <label className={labelClass}>Desde<input type="date" value={custom.from} max={custom.to} onChange={(e) => setCustom({ ...custom, from: e.target.value })} className={inputClass} /></label>
+            <label className={labelClass}>Hasta<input type="date" value={custom.to} min={custom.from} onChange={(e) => setCustom({ ...custom, to: e.target.value })} className={inputClass} /></label>
           </>
         )}
       </div>
@@ -59,20 +57,21 @@ export function ReportsPage() {
       {o && (
         <div className="flex flex-col gap-6">
           <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Stat label="Leads nuevos" value={o.newLeads.toLocaleString('es-CO')} />
-            <Stat label="Valor del embudo abierto" value={money(o.pipelineValue)} />
-            <Stat label={`Ganados (${o.won.count})`} value={money(o.won.value)} />
-            <Stat label="Tasa de conversión" value={pct(o.conversionRate)} hint={`${o.won.count} ganados de ${o.won.count + o.lost.count} cerrados`} />
+            <StatTile label="Leads nuevos" value={o.newLeads.toLocaleString('es-CO')} />
+            <StatTile label="Valor del embudo abierto" value={money(o.pipelineValue)} />
+            <StatTile label={`Ganados (${o.won.count})`} value={money(o.won.value)} />
+            <StatTile label="Tasa de conversión" value={pct(o.conversionRate)} hint={`${o.won.count} ganados de ${o.won.count + o.lost.count} cerrados`} />
           </dl>
 
-          <section aria-labelledby="stages-title" className="rounded-xl border border-line bg-surface p-4">
-            <h2 id="stages-title" className="font-semibold text-ink">Negocios abiertos por etapa</h2>
+          <section aria-labelledby="stages-title" className="rounded-xl border border-line bg-surface p-4 shadow-sm">
+            <div className="flex items-center gap-3"><IconTile>▣</IconTile><h2 id="stages-title" className="text-sm font-semibold text-ink">Negocios abiertos por etapa</h2></div>
+            {!o.dealsByStage.some((st) => st.count) && <div className="mt-3"><EmptyState icon="▣" title="Sin negocios abiertos">Cuando entren negocios al embudo, aquí ves cuánto hay en cada etapa.</EmptyState></div>}
             <ul className="mt-3 flex flex-col gap-2">
               {o.dealsByStage.map((s) => (
-                <li key={s.stageId} className="grid grid-cols-[minmax(6rem,10rem)_1fr_auto] items-center gap-3 text-sm" title={`${s.name}: ${s.count} negocios · ${money(s.value)}`}>
+                <li key={s.stageId} className="grid grid-cols-[minmax(6rem,10rem)_1fr_auto] items-center gap-3 text-xs" title={`${s.name}: ${s.count} negocios · ${money(s.value)}`}>
                   <span className="truncate text-ink">{s.name}</span>
-                  <span className="h-3 rounded-r bg-canvas">
-                    <span className="block h-full rounded-r bg-honey" style={{ width: `${(s.value / maxStage) * 100}%`, minWidth: s.value ? 4 : 0 }} />
+                  <span className="h-2.5 rounded-full bg-raised">
+                    <span className="block h-full rounded-full bg-honey" style={{ width: `${(s.value / maxStage) * 100}%`, minWidth: s.value ? 4 : 0 }} />
                   </span>
                   <span className="whitespace-nowrap text-muted">{s.count} · {money(s.value)}</span>
                 </li>
@@ -84,25 +83,30 @@ export function ReportsPage() {
 
       {performance.data && (
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          <Table title="Por responsable" head={['Responsable', 'Negocios', 'Ganados', 'Ingresos', 'Conversión']}
+          <Table icon="♙" title="Por responsable" head={['Responsable', 'Negocios', 'Ganados', 'Ingresos', 'Conversión']}
             rows={performance.data.byOwner.map((r) => [r.name, r.deals, r.won, money(r.wonValue), pct(r.conversionRate)])} />
-          <Table title="Por fuente" head={['Fuente', 'Leads', 'Ganados', 'Ingresos', 'Conversión']}
+          <Table icon="↗" title="Por fuente" head={['Fuente', 'Leads', 'Ganados', 'Ingresos', 'Conversión']}
             rows={performance.data.bySource.map((r) => [r.source === 'sin_origen' ? 'Sin origen' : r.source, r.leads, r.won, money(r.wonValue), pct(r.conversionRate)])} />
         </div>
       )}
 
       {response.data && (
         <section className="mt-6" aria-labelledby="response-title">
-          <h2 id="response-title" className="font-semibold text-ink">Primera respuesta</h2>
-          <p className="mt-1 text-sm text-muted">SLA: {response.data.slaMinutes} minutos. Solo cuentan respuestas de personas, no las automáticas.</p>
+          <div className="flex items-center gap-3">
+            <IconTile>⏱</IconTile>
+            <div>
+              <h2 id="response-title" className="text-sm font-semibold text-ink">Primera respuesta</h2>
+              <p className="text-xs text-muted">SLA: {response.data.slaMinutes} minutos. Solo cuentan respuestas de personas, no las del asistente ni las automáticas.</p>
+            </div>
+          </div>
           <dl className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Stat label="Promedio" value={minutes(response.data.overall.avgMinutes)} />
-            <Stat label="Conversaciones atendidas" value={String(response.data.overall.conversations)} />
-            <Stat label="Fuera de SLA" value={String(response.data.overall.breaches)} />
-            <Stat label="Sin responder" value={String(response.data.overall.pending)} hint={response.data.overall.pendingBreaches ? `${response.data.overall.pendingBreaches} ya fuera de SLA` : undefined} />
+            <StatTile label="Promedio" value={minutes(response.data.overall.avgMinutes)} />
+            <StatTile label="Conversaciones atendidas" value={String(response.data.overall.conversations)} />
+            <StatTile label="Fuera de SLA" value={String(response.data.overall.breaches)} />
+            <StatTile label="Sin responder" value={String(response.data.overall.pending)} hint={response.data.overall.pendingBreaches ? `${response.data.overall.pendingBreaches} ya fuera de SLA` : undefined} />
           </dl>
           <div className="mt-3">
-            <Table title="Por persona" head={['Persona', 'Conversaciones', 'Promedio', 'Fuera de SLA']}
+            <Table icon="☺" title="Por persona" head={['Persona', 'Conversaciones', 'Promedio', 'Fuera de SLA']}
               rows={response.data.byResponder.map((r) => [r.name ?? '—', r.conversations, minutes(r.avgMinutes), r.breaches])} />
           </div>
         </section>
@@ -111,27 +115,19 @@ export function ReportsPage() {
   );
 }
 
-function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
+function Table({ icon, title, head, rows }: { icon: string; title: string; head: string[]; rows: (string | number)[][] }) {
   return (
-    <div className="rounded-xl border border-line bg-surface p-4">
-      <dt className="text-xs text-muted">{label}</dt>
-      <dd className="mt-1 text-xl font-semibold text-ink">{value}</dd>
-      {hint && <dd className="text-xs text-muted">{hint}</dd>}
-    </div>
-  );
-}
-
-function Table({ title, head, rows }: { title: string; head: string[]; rows: (string | number)[][] }) {
-  return (
-    <section className="overflow-x-auto rounded-xl border border-line bg-surface">
-      <table className="w-full text-left text-sm">
-        <caption className="px-4 pt-3 text-left font-semibold text-ink">{title}</caption>
-        <thead className="text-xs text-muted"><tr>{head.map((h) => <th key={h} scope="col" className="px-4 py-2 font-medium">{h}</th>)}</tr></thead>
-        <tbody className="divide-y divide-line">
-          {rows.map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j} className="px-4 py-2 text-ink">{c}</td>)}</tr>)}
-          {!rows.length && <tr><td colSpan={head.length} className="px-4 py-3 text-muted">Sin datos en este período.</td></tr>}
-        </tbody>
-      </table>
+    <section className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
+      <div className="flex items-center gap-3 px-4 py-3"><IconTile>{icon}</IconTile><h2 className="text-sm font-semibold text-ink">{title}</h2></div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-xs">
+          <thead className={tableHeadClass}><tr>{head.map((h) => <th key={h} scope="col" className="px-4 py-2 font-semibold">{h}</th>)}</tr></thead>
+          <tbody className="divide-y divide-line">
+            {rows.map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j} className={`px-4 py-2 ${j === 0 ? 'font-semibold text-ink' : 'text-ink'}`}>{c}</td>)}</tr>)}
+            {!rows.length && <tr><td colSpan={head.length} className="px-4 py-4 text-center text-muted">Sin datos en este período.</td></tr>}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }

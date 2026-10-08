@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { linkTarget } from '../link-target';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
@@ -48,7 +49,7 @@ export function NotificationsBell() {
             {notifications.data?.items.map((n) => (
               <li key={n.id} className={n.readAt ? '' : 'bg-honey/10'}>
                 <Link
-                  to={(n.link ?? '/') as '/'}
+                  {...(linkTarget(n.link) as { to: '/' })}
                   onClick={() => { if (!n.readAt) read.mutate(n.id); setOpen(false); }}
                   className="block px-4 py-3"
                 >
@@ -143,19 +144,33 @@ export function AccountBanner() {
   if (!plan.data) return null;
   const { status, trialEndsAt } = plan.data;
   if (status === 'read_only' || status === 'canceled') {
-    return (
-      <p role="status" className="mb-4 rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">
-        Tu cuenta está en solo lectura: podés ver y exportar todo, pero no modificar. <Link to="/settings" className="font-semibold underline">Activá un plan</Link> para seguir trabajando.
-      </p>
-    );
+    return <Banner tone="danger" icon="!" title="Tu cuenta está en solo lectura" text="Puedes ver y exportar todo, pero no modificar. Tus datos están intactos." cta="Activar un plan" />;
   }
   if (status === 'past_due') {
-    return <p role="status" className="mb-4 rounded-lg bg-honey/25 px-4 py-3 text-sm text-ink">No pudimos cobrar tu suscripción. <Link to="/settings" className="font-semibold underline">Revisá tu tarjeta</Link>.</p>;
+    return <Banner icon="$" title="No pudimos cobrar tu suscripción" text="Reintentamos en unos días. Revisa la tarjeta para no perder el acceso." cta="Revisar tarjeta" />;
   }
   if (status === 'trialing' && trialEndsAt) {
     const days = Math.ceil((Date.parse(trialEndsAt) - Date.now()) / 86_400_000);
     if (days > 7) return null;
-    return <p role="status" className="mb-4 rounded-lg bg-honey/25 px-4 py-3 text-sm text-ink">Te {days === 1 ? 'queda 1 día' : `quedan ${days} días`} de prueba. <Link to="/settings" className="font-semibold underline">Elegí un plan</Link>.</p>;
+    return <Banner icon="⌛" title={`Te ${days === 1 ? 'queda 1 día' : `quedan ${days} días`} de prueba`} text="Elige un plan para seguir trabajando sin interrupciones." cta="Elegir plan" />;
   }
   return null;
+}
+
+/** Mismo patrón que el banner de "Conecta un canal" del Inicio: ícono, título, bajada y acción. */
+function Banner({ tone = 'honey', icon, title, text, cta }: { tone?: 'honey' | 'danger'; icon: string; title: string; text: string; cta: string }) {
+  const box = tone === 'danger' ? 'border-danger/40 bg-danger-soft' : 'border-honey/50 bg-honey-soft';
+  const tile = tone === 'danger' ? 'bg-danger text-surface' : 'bg-honey text-ink';
+  return (
+    <section role="status" className={`mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 ${box}`}>
+      <div className="flex items-center gap-3">
+        <span aria-hidden className={`grid size-8 place-items-center rounded-md font-semibold ${tile}`}>{icon}</span>
+        <div>
+          <h2 className={`text-sm font-semibold ${tone === 'danger' ? 'text-danger' : 'text-ink'}`}>{title}</h2>
+          <p className="mt-0.5 text-xs text-muted">{text}</p>
+        </div>
+      </div>
+      <Link to="/settings" search={{ tab: 'plan' }} className="rounded-lg bg-surface px-3 py-2 text-xs font-semibold text-ink shadow-sm">{cta}</Link>
+    </section>
+  );
 }

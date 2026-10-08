@@ -61,3 +61,33 @@ Números de métricas grandes, etiquetas en mayúsculas pequeñas solo para head
 2. **Cada bloque trae crear + ver todo**: header con `+ Crear` y link `All`.
 3. **Onboarding visible**: checklist que se tacha solo, banner para conectar canal, hints descartables por sección.
 4. **Todo crea con un gesto**: guardar cliente crea el negocio; toda tarea cuelga de un negocio.
+
+## Voz
+
+Español neutro de Colombia, **tuteando**: "Conecta tu número", "Puedes exportar", "Revisa la tarjeta". **Nunca voseo** ("Podés", "Revisá", "acá"): un cliente colombiano lo lee como un software que no es para él. Vale también para los mensajes de error de la API, que la web muestra tal cual. Frases cortas que explican qué pasa y qué hacer, sin culpar al usuario.
+
+## Componentes en código
+
+Viven en `apps/web/src/shared/ui/section.tsx`. Una pantalla nueva usa estos componentes en lugar de inventar clases.
+
+| Pieza | Uso |
+|---|---|
+| `SettingsSection` | Card de sección: tile de ícono en miel suave, título `text-sm`, bajada `text-xs` y acción opcional a la derecha. `tone="danger"` para acciones irreversibles. |
+| `primaryButton` / `secondaryButton` / `dangerButton` / `linkButton` | CTA miel con `+` adelante cuando crea algo, fantasma con borde, destructivo y acción de texto. |
+| `Segmented` | Filtros y alternadores de vista. El activo va en miel sólido. |
+| `Badge` | Estados con fondo suave: `success`, `honey` (atención), `danger`, `info` y `neutral`. |
+| `EmptyState` | Ningún bloque en blanco: ícono, título, explicación y acción. |
+| `StatTile`, `Meter` | Métricas y barras de uso. `Meter` pasa a miel al 80 % y a rojo al 100 %. |
+| `labelClass`, `inputClass`, `textareaClass`, `tableHeadClass` | Label `text-xs font-semibold` muted, input `h-10`, header de tabla en mayúsculas chicas sobre miel suave. |
+
+## Configuración
+
+Está organizada en pestañas (`/settings?tab=general|canales|ia|plan|privacidad`), con navegación lateral en desktop y horizontal en el teléfono. Cada rol ve solo las pestañas que puede gestionar. Los avisos y banners enlazan directo a su pestaña. Los enlaces que llegan del servidor pasan por `linkTarget()`, que separa la ruta de los parámetros: el router no entiende `"/inbox?c=1"` dentro de `to`.
+
+## Asistente de IA
+
+- **Ícono:** `✦`. Es el gesto del asistente en todas partes: sección, bandeja y registro.
+- **En la bandeja:** los mensajes del asistente llevan el rótulo `✦ ASISTENTE` sobre la burbuja.
+- **Barra de estado:** bajo el encabezado de la conversación, una barra dice si el asistente responde, desde cuándo está en pausa y por qué, con el botón **Pausar / Reanudar**.
+- **Traspasos:** en la lista, un traspaso se marca con la badge miel "Te necesita".
+- **Configuración:** sigue el orden estado y cuota → cómo se presenta → traspaso → datos que captura → base de conocimiento → simulador → registro, porque es el orden en que alguien lo configura la primera vez.

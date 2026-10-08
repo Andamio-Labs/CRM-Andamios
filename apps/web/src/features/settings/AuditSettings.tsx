@@ -1,6 +1,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '../../shared/api';
+import { linkButton, Segmented, SettingsSection } from '../../shared/ui/section';
 import { useRegion } from '../../shared/i18n/use-region';
 
 interface Entry { id: number; action: string; entity: string; entityId: string | null; actorName: string | null; data: { fields?: string[] }; ip: string | null; createdAt: string }
@@ -19,7 +20,7 @@ const FILTERS = [['', 'Todo'], ['view', 'Vistas'], ['update', 'Cambios'], ['dele
 /** E13-S06 — Registro de auditoría: quién vio, modificó, exportó o eliminó datos. Solo lectura. */
 export function AuditSettings() {
   const { date, time } = useRegion();
-  const [action, setAction] = useState('');
+  const [action, setAction] = useState<(typeof FILTERS)[number][0]>('');
   const log = useInfiniteQuery({
     queryKey: ['audit', action],
     initialPageParam: '',
@@ -32,32 +33,25 @@ export function AuditSettings() {
   const items = log.data?.pages.flatMap((p) => p.items) ?? [];
 
   return (
-    <section className="mt-10" aria-labelledby="audit-title">
-      <h2 id="audit-title" className="text-lg font-semibold text-ink">Registro de auditoría</h2>
-      <p className="mt-1 text-sm text-muted">Quién vio, modificó, exportó o eliminó datos. Nadie puede editarlo ni borrarlo.</p>
-      <div className="mt-3 flex gap-2 overflow-x-auto" role="group" aria-label="Filtrar">
-        {FILTERS.map(([value, label]) => (
-          <button key={value} onClick={() => setAction(value)} aria-pressed={action === value}
-            className={`min-h-11 shrink-0 rounded-full border px-4 text-sm ${action === value ? 'border-ink bg-ink text-surface' : 'border-line text-ink'}`}>{label}</button>
-        ))}
-      </div>
-      <ol className="mt-3 divide-y divide-line rounded-xl border border-line bg-surface">
+    <SettingsSection icon="☰" title="Registro de auditoría" description="Quién vio, modificó, exportó o eliminó datos. Nadie puede editarlo ni borrarlo.">
+      <Segmented label="Filtrar el registro" options={FILTERS} value={action} onChange={setAction} />
+      <ol className="mt-3 divide-y divide-line rounded-lg border border-line">
         {items.map((e) => (
-          <li key={e.id} className="px-4 py-2.5 text-sm">
+          <li key={e.id} className="px-3 py-2.5 text-xs">
             <p className="text-ink">
               <strong>{e.actorName ?? 'Sistema'}</strong> {(ACTIONS[e.action] ?? e.action).toLowerCase()} {ENTITIES[e.entity] ?? e.entity}
               {e.data.fields?.length ? <span className="text-muted"> ({e.data.fields.join(', ')})</span> : null}
             </p>
-            <p className="text-xs text-muted">{date(e.createdAt)} {time(e.createdAt)}{e.ip ? ` · IP ${e.ip}` : ''}</p>
+            <p className="mt-0.5 text-[11px] text-muted">{date(e.createdAt)} {time(e.createdAt)}{e.ip ? ` · IP ${e.ip}` : ''}</p>
           </li>
         ))}
-        {log.isSuccess && !items.length && <li className="px-4 py-3 text-sm text-muted">Sin registros.</li>}
+        {log.isSuccess && !items.length && <li className="px-3 py-3 text-xs text-muted">Sin registros con este filtro.</li>}
       </ol>
       {log.hasNextPage && (
-        <button onClick={() => log.fetchNextPage()} className="mt-2 inline-flex min-h-11 items-center text-sm text-ink underline">
+        <button onClick={() => log.fetchNextPage()} className={`${linkButton} mt-2`}>
           {log.isFetchingNextPage ? 'Cargando…' : 'Ver más'}
         </button>
       )}
-    </section>
+    </SettingsSection>
   );
 }

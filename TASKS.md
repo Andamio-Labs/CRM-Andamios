@@ -9,13 +9,13 @@ Leyenda: `[x]` hecha · `[~]` parcial (ver nota) · `[ ]` pendiente · ⏸ difer
 <!-- progreso -->
 | Fase | Hechas | Puntos hechos |
 |---|---|---|
-| MVP | 47 / 65 (+12 parciales) | 255 / 386 |
+| MVP | 55 / 65 (+10 parciales) | 305 / 386 |
 | Fase-2 | 1 / 41 | 3 / 298 |
 | Fase-3 | 0 / 21 | 0 / 264 |
-| **Total** | **48 / 127** | **258 / 948** |
+| **Total** | **56 / 127** | **308 / 948** |
 <!-- /progreso -->
 
-Última actualización: 2026-10-08 · Tests: 456 API + 45 web, todos en verde. Sprints 0 a 5 y 8 cerrados; Sprints 6 y 7 con lo no-IA hecho (E10-S03 Wompi falta validar en sandbox).
+Última actualización: 2026-10-08 · Tests: 559 API + 55 web, todos en verde. Sprints 0 a 8 cerrados salvo lo que depende de algo externo: proveedor de IA real (E05-S03 latencia), Wompi sandbox (E10-S03), Meta (E04-S01), abogado (E13-S01) y despliegue (E15).
 
 ## Decisiones que modifican el backlog
 
@@ -24,6 +24,7 @@ Leyenda: `[x]` hecha · `[~]` parcial (ver nota) · `[ ]` pendiente · ⏸ difer
 - **Pasarela de pago (2026-10-08):** Wompi. **Consentimiento de marketing por WhatsApp:** queda como está (escribir primero habilita plantillas); se revisa con la gestión ante Meta.
 
 - **IA al final (2026-10-08):** el proveedor de LLM será probablemente Groq o DeepSeek (por costo) y los embeddings, un modelo local. Hasta entonces, las stories de E05 se construyen sin IA detrás de los puertos `LlmProvider` (y luego `Embedder`); las que solo son IA quedan ⏸. Se sigue con lo no-IA de los sprints 6 a 9.
+  - **Resuelto (2026-10-08):** un adaptador compatible con OpenAI para el LLM (Groq o DeepSeek por variables) y otro para embeddings locales (Ollama, bge-m3, 1024 dimensiones). E05-S01 a S08 hechas con simuladores; falta probar con llaves reales (ver `docs/ia.md`).
 
 - **Stories extra** detectadas en el análisis (no están en el CSV) al final del archivo, con prefijo `X`.
 
@@ -129,32 +130,34 @@ Leyenda: `[x]` hecha · `[~]` parcial (ver nota) · `[ ]` pendiente · ⏸ difer
   - ✔ `/api/v1/exports/{contacts,deals,tasks}.csv` solo propietario; queda en `audit_log`; neutraliza fórmulas (inyección CSV en Excel).
 - [x] **E09-S01** (3p) Enlace y botón Click-to-WhatsApp con UTM — _Generador de enlaces con parámetros; el origen y la campaña se guardan en el contacto._
   - ✔ Generador de enlaces con UTM en Configuración; la redirección cuenta clics y atribuye origen y campaña al contacto. Tests: `automation-plans.spec.ts`.
-- [~] **E10-S01** (8p) Planes y límites configurables — _Límites por plan: usuarios, canales, cuota de IA y almacenamiento; se aplican en toda la plataforma._
-  - ✅ Límites por plan aplicados: usuarios (cuenta invitaciones pendientes), números de WhatsApp y almacenamiento; uso visible. ⏳ La cuota de IA (`aiRepliesPerMonth`) está definida pero se aplica con E05-S06.
+- [x] **E10-S01** (8p) Planes y límites configurables — _Límites por plan: usuarios, canales, cuota de IA y almacenamiento; se aplican en toda la plataforma._
+  - ✔ Límites por plan aplicados: usuarios (cuenta invitaciones pendientes), números de WhatsApp, almacenamiento y cuota de IA (`aiRepliesPerMonth`, con E05-S06); uso visible.
 - [x] **E07-S01** (8p) Reglas predefinidas del MVP — _Cuatro reglas activables: lead nuevo → asignar y crear tarea; sin respuesta en X horas → recordatorio; cambio de etapa → enviar plantilla; negocio ganado → notificar. Con registro de ejecuciones._
   - ✔ Las 4 reglas activables (lead nuevo → asignación por turnos + tarea; sin respuesta en X horas; cambio de etapa → plantilla; ganado → notificar) con registro de ejecuciones; solo propietario/admin configuran.
 
 ## Sprint 6 — MVP · 47 pts
 
-- [~] **E05-S01** (5p) Configuración del agente — _Nombre, tono, idioma, horario de atención e instrucciones del negocio editables; vista previa en un simulador._
-  - ✅ `/api/v1/ai/agent`: nombre, tono, idioma, horario (siempre / horario laboral / fuera de horario) e instrucciones; solo propietario/admin. Simulador `POST /ai/agent/preview` muestra el prompt armado (`buildAgentPrompt`, reglas fijas al final). Puerto `LlmProvider` con `NotConfiguredLlm`: no se puede activar sin IA (409 `AI_NOT_CONFIGURED`). ⏳ Respuesta real del simulador al conectar el proveedor.
-- [~] **E05-S02** (8p) Base de conocimiento — _Carga de FAQ, texto, PDF y URL; indexación vectorial (pgvector); estado de indexación visible._
-  - ✅ `/api/v1/ai/knowledge`: FAQ y texto (hasta 100.000 caracteres), troceado por párrafos y oraciones (`chunking.ts`), estado visible (esperando IA / indexando / lista / con error). ⏳ PDF (dependencia `unpdf`), URL (requiere guardia SSRF) y embeddings en pgvector: la columna se agrega cuando se elija el modelo.
-- [ ] **E05-S03** (13p) Respuestas automáticas con RAG en WhatsApp — _Responde solo con información de la base; si no sabe, escala a humano; latencia p95 menor a 10 s._
-  - ⏸ IA al final del MVP (decisión 2026-10-08).
-- [ ] **E05-S06** (5p) Cuotas y control de costos — _Cuota mensual de respuestas por plan; contador visible; alertas al 80 % y 100 %; bloqueo configurable._
-  - ⏸ IA al final del MVP (decisión 2026-10-08).
-- [ ] **E05-S07** (8p) Guardrails y seguridad del agente — _Defensa ante prompt injection, no revela instrucciones internas, no promete precios o descuentos no autorizados, filtra datos sensibles._
-  - ⏸ IA al final del MVP (decisión 2026-10-08).
-- [ ] **E05-S08** (3p) Registro de conversaciones de IA — _Guarda prompt, respuesta, modelo, tokens y costo por mensaje; consultable por el propietario._
-  - ⏸ IA al final del MVP (decisión 2026-10-08).
+- [x] **E05-S01** (5p) Configuración del agente — _Nombre, tono, idioma, horario de atención e instrucciones del negocio editables; vista previa en un simulador._
+  - ✔ `/api/v1/ai/agent`: nombre, tono, idioma, horario e instrucciones; solo propietario/admin. Proveedor por configuración: un adaptador compatible con OpenAI sirve para Groq o DeepSeek (`LLM_*`), simulador `local` para desarrollo y tests (prohibido en producción). El simulador corre el turno completo (búsqueda, modelo JSON y guardrails), no envía nada y queda en el registro sin contar para la cuota. Ver `docs/ia.md`.
+- [x] **E05-S02** (8p) Base de conocimiento — _Carga de FAQ, texto, PDF y URL; indexación vectorial (pgvector); estado de indexación visible._
+  - ✔ FAQ, texto, PDF (`unpdf`, solo con texto) y URL (guardia SSRF validada en el `lookup` del socket, 2 MB/10 s/3 redirecciones, "volver a leer"). Embeddings `vector(1024)` (bge-m3 en Ollama, `EMBEDDINGS_*`), indexación en la cola `ai` después del commit, barrido horario de pendientes/fallidas; estado visible. Búsqueda exacta por tenant (sin HNSW, ver `docs/ia.md`). ⏳ Validar con Ollama real.
+- [~] **E05-S03** (13p) Respuestas automáticas con RAG en WhatsApp — _Responde solo con información de la base; si no sabe, escala a humano; latencia p95 menor a 10 s._
+  - ✅ Respuesta automática por WhatsApp: se encola tras el webhook (1,5 s para agrupar mensajes seguidos), responde solo con la base (top 4 fragmentos) en una llamada JSON `{reply, handoff, fields}`; si no sabe, pasa a una persona. Timeout 8 s → traspaso. Respuestas `ai_generated` sin `sent_by` (no cuentan para el SLA); si responde la IA, no sale el mensaje de fuera de horario. Tests: `ai-auto-reply.spec.ts`. ⏳ Medir la latencia p95 con el proveedor real.
+- [x] **E05-S06** (5p) Cuotas y control de costos — _Cuota mensual de respuestas por plan; contador visible; alertas al 80 % y 100 %; bloqueo configurable._
+  - ✔ Cuota mensual por plan contada en el mes de la empresa; `GET /ai/usage` y medidor en Configuración; avisos al 80 % y 100 % una vez por mes (`ai_usage_alerts`); bloqueo configurable (`blockOnQuota`). Tests: `ai-quota-qualification.spec.ts`.
+- [x] **E05-S07** (8p) Guardrails y seguridad del agente — _Defensa ante prompt injection, no revela instrucciones internas, no promete precios o descuentos no autorizados, filtra datos sensibles._
+  - ✔ Guardrails deterministas fuera del modelo (`guardrails.ts`): prompt injection → respuesta segura sin llamar al modelo; tarjetas (Luhn) y contraseñas se tapan antes de ir al proveedor y en la respuesta; precios o porcentajes que no están en la base → no se envía y pasa a una persona; si repite sus reglas → bloqueada. Conocimiento delimitado como datos y reglas fijas al final del prompt.
+- [x] **E05-S08** (3p) Registro de conversaciones de IA — _Guarda prompt, respuesta, modelo, tokens y costo por mensaje; consultable por el propietario._
+  - ✔ `ai_interactions`: prompt, respuesta, modelo, tokens, costo (micro-USD con `LLM_PRICE_*`), latencia, fuentes y datos capturados por turno. Inmutable, se borra con la conversación (supresión del titular). Solo el propietario (`ai:logs`): registro con filtros, costo del mes y detalle en Configuración → Asistente IA.
 - [x] **E13-S02** (5p) Consentimiento y finalidad por contacto — _Guarda base legal, finalidad y fecha del consentimiento de cada contacto._
   - ✔ `contact_consents` append-only (la app no puede editar ni borrar): base legal (Ley 1581), finalidades, canal, evidencia, quién y cuándo; estado actual por finalidad. BAJA/ALTA y el primer mensaje de WhatsApp quedan en el historial; la fusión copia el historial del duplicado. UI en la ficha del contacto. Tests: `privacy-consent.spec.ts`.
 
 ## Sprint 7 — MVP · 47 pts
 
-- [ ] **E05-S04** (8p) Calificación del lead — _Captura nombre, interés, presupuesto u otros campos definidos y los guarda en contacto y negocio._
-- [ ] **E05-S05** (5p) Traspaso a humano y pausa — _La IA se pausa cuando un vendedor responde; botón de pausar/reanudar; palabras de escalamiento ("asesor", "humano")._
+- [x] **E05-S04** (8p) Calificación del lead — _Captura nombre, interés, presupuesto u otros campos definidos y los guarda en contacto y negocio._
+  - ✔ El modelo devuelve los datos dichos por el cliente en `fields`; se guardan en contacto y negocio (nombre, correo, presupuesto, interés y campos personalizados configurables) solo si estaban vacíos y son válidos: nunca pisa lo cargado por una persona.
+- [x] **E05-S05** (5p) Traspaso a humano y pausa — _La IA se pausa cuando un vendedor responde; botón de pausar/reanudar; palabras de escalamiento ("asesor", "humano")._
+  - ✔ Pausa por conversación: 24 h cuando responde una persona; hasta reanudar ante traspaso, freno de seguridad o pausa manual (`PUT /conversations/:id/ai`, cualquiera que vea la conversación). Palabras de escalamiento configurables. Aviso `ai_handoff` a quien tiene la conversación. Barra de estado y botón en la bandeja.
 - [x] **E08-S01** (8p) Panel básico — _Leads nuevos, negocios por etapa, tasa de conversión y valor del pipeline, con rango de fechas._
   - ✔ `GET /api/v1/reports/overview`: leads nuevos, negocios abiertos por etapa, valor del embudo, ganados/perdidos y conversión, con rango de fechas en la zona de la empresa. El vendedor ve solo sus números. UI `/reports`. Tests: `reports.spec.ts`.
 - [x] **E08-S02** (5p) Primera respuesta y SLA — _Tiempo promedio de primera respuesta por vendedor y alertas al superar el SLA definido._

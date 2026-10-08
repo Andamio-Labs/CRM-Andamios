@@ -72,7 +72,7 @@ export function HomePage() {
 }
 
 function ConnectBanner() {
-  return <section className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-honey/50 bg-honey-soft px-4 py-3"><div className="flex items-center gap-3"><span className="grid size-8 place-items-center rounded-md bg-honey text-ink">⌁</span><div><h2 className="text-sm font-semibold text-ink">Conecta un canal y tus clientes aparecerán aquí</h2><p className="mt-0.5 text-xs text-muted">Conecta WhatsApp para empezar a recibir conversaciones y organizar tus negocios.</p></div></div><Link to="/settings" className="rounded-lg bg-surface px-3 py-2 text-xs font-semibold text-ink shadow-sm">Conectar canal</Link></section>;
+  return <section className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-honey/50 bg-honey-soft px-4 py-3"><div className="flex items-center gap-3"><span className="grid size-8 place-items-center rounded-md bg-honey text-ink">⌁</span><div><h2 className="text-sm font-semibold text-ink">Conecta un canal y tus clientes aparecerán aquí</h2><p className="mt-0.5 text-xs text-muted">Conecta WhatsApp para empezar a recibir conversaciones y organizar tus negocios.</p></div></div><Link to="/settings" search={{ tab: 'canales' }} className="rounded-lg bg-surface px-3 py-2 text-xs font-semibold text-ink shadow-sm">Conectar canal</Link></section>;
 }
 
 function Onboarding() {

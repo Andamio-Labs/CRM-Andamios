@@ -18,3 +18,11 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   if (!res.ok) throw new ApiError(res.status, body.code, body.message ?? `HTTP ${res.status}`, body);
   return body as T;
 }
+
+/** Subida multipart (archivos): el navegador pone el content-type con el boundary. */
+export async function upload<T>(path: string, body: FormData): Promise<T> {
+  const res = await fetch(path, { method: 'POST', body });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(res.status, json.code, json.message ?? `HTTP ${res.status}`, json);
+  return json as T;
+}

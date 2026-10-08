@@ -47,7 +47,7 @@ export function ContactPrivacy({ contactId, contactName }: { contactId: string; 
       {confirming && (
         <div role="alertdialog" aria-label="Confirmar supresión" className="flex flex-col gap-2 rounded-lg border border-danger/40 p-3 text-sm">
           <p className="text-ink">Se borran conversaciones, mensajes, archivos y tareas, y el contacto queda anónimo. Los negocios se conservan sin datos personales. <strong>No se puede deshacer.</strong></p>
-          <label className="flex flex-col gap-1 text-ink">Escribí <strong>{contactName}</strong> para confirmar
+          <label className="flex flex-col gap-1 text-ink">Escribe <strong>{contactName}</strong> para confirmar
             <input value={typed} onChange={(e) => setTyped(e.target.value)} className={selectClass} />
           </label>
           {erase.isError && <Alert>No pudimos suprimir los datos.</Alert>}

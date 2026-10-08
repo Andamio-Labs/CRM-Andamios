@@ -73,7 +73,7 @@ export function ContactConsents({ contactId }: { contactId: string }) {
           <select name="channel" aria-label="Canal" className={selectClass}>{Object.entries(CHANNELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
         </div>
         <input name="evidence" maxLength={1000} placeholder="Evidencia (opcional): dónde y cómo lo autorizó" className={`${selectClass} w-full`} />
-        {record.isError && <Alert>{record.error instanceof ApiError && record.error.status === 400 ? 'Elegí al menos una finalidad.' : 'No pudimos guardar el registro.'}</Alert>}
+        {record.isError && <Alert>{record.error instanceof ApiError && record.error.status === 400 ? 'Elige al menos una finalidad.' : 'No pudimos guardar el registro.'}</Alert>}
         <Button type="submit" loading={record.isPending} className="self-start">Registrar</Button>
       </form>
 

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type FormEvent, useState } from 'react';
 import { api, ApiError } from '../../shared/api';
+import { SettingsSection } from '../../shared/ui/section';
 import { Alert, Button, Field } from '../../shared/ui/form';
 
 type RuleKey = 'new_lead' | 'no_reply' | 'stage_template' | 'won_notify';
@@ -38,12 +39,10 @@ function AutomationRules() {
   const stages = pipelines.data?.flatMap((p) => p.stages.map((s) => ({ ...s, label: `${p.name}: ${s.name}` }))) ?? [];
 
   return (
-    <section className="mt-10" aria-labelledby="rules-title">
-      <h2 id="rules-title" className="text-lg font-semibold text-ink">Automatizaciones</h2>
-      <p className="mt-1 text-sm text-muted">Reglas listas para usar. Cada ejecución queda registrada.</p>
+    <SettingsSection icon="ϟ" title="Automatizaciones" description={<>Reglas listas para usar. Cada ejecución queda registrada.</>}>
       <ul className="mt-3 flex flex-col gap-3">
         {rules.data?.map((r) => (
-          <li key={r.rule} className="rounded-xl border border-line bg-surface p-4">
+          <li key={r.rule} className="rounded-lg border border-line p-3">
             <label className="flex min-h-11 items-center gap-3">
               <input type="checkbox" checked={r.enabled} onChange={(e) => save.mutate({ rule: r.rule, enabled: e.target.checked, config: r.config })} className="size-5 accent-honey" />
               <span className="font-medium text-ink">{r.label}</span>
@@ -83,7 +82,7 @@ function AutomationRules() {
         ))}
       </ul>
       {save.isError && <div className="mt-3"><Alert>{errorText(save.error)}</Alert></div>}
-    </section>
+    </SettingsSection>
   );
 }
 
@@ -115,9 +114,7 @@ function WaLinks() {
   }
 
   return (
-    <section className="mt-10" aria-labelledby="links-title">
-      <h2 id="links-title" className="text-lg font-semibold text-ink">Enlaces a WhatsApp para anuncios</h2>
-      <p className="mt-1 text-sm text-muted">Úsalos en anuncios, redes o tu web: el cliente llega con el mensaje escrito y el origen y la campaña quedan en su ficha.</p>
+    <SettingsSection icon="↗" title="Enlaces a WhatsApp para anuncios" description={<>Úsalos en anuncios, redes o tu web: el cliente llega con el mensaje escrito y el origen y la campaña quedan en su ficha.</>}>
       <ul className="mt-3 divide-y divide-line rounded-xl border border-line bg-surface empty:hidden">
         {links.data?.map((l) => (
           <li key={l.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
@@ -131,7 +128,7 @@ function WaLinks() {
         ))}
       </ul>
       {Boolean(channels.data?.length) && (
-        <form onSubmit={onSubmit} className="mt-4 grid gap-3 rounded-xl border border-line bg-surface p-4 sm:grid-cols-2">
+        <form onSubmit={onSubmit} className="mt-4 grid gap-3 rounded-lg border border-line p-3 sm:grid-cols-2">
           <label className="flex flex-col gap-1.5 text-sm font-medium text-ink">
             Número
             <select name="channelId" className="h-11 rounded-lg border border-line bg-surface px-3">
@@ -146,6 +143,6 @@ function WaLinks() {
           <div className="sm:col-span-2"><Button type="submit" loading={create.isPending}>Crear enlace</Button></div>
         </form>
       )}
-    </section>
+    </SettingsSection>
   );
 }

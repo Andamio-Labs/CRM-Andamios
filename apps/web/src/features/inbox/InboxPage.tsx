@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../shared/api';
 import { authClient } from '../../shared/auth-client';
@@ -6,6 +7,8 @@ import { useRegion } from '../../shared/i18n/use-region';
 import { useRealtime } from '../../shared/realtime';
 import { AppShell } from '../../shared/ui/app-shell';
 import { Alert } from '../../shared/ui/form';
+import { Badge } from '../../shared/ui/section';
+import { aiPauseState, PAUSE_REASONS, type PauseReason } from '../ai/ai-format';
 import { Composer } from './Composer';
 import { type ConversationWindow, windowLabel } from './window';
 
@@ -16,6 +19,10 @@ interface Conversation {
   assignedTo: string | null;
   window: ConversationWindow;
   contact: { id: string; name: string; phone: string | null };
+  /** E05-S05 */
+  aiPausedUntil: string | null;
+  aiPauseReason: PauseReason | null;
+  aiAgentEnabled: boolean;
 }
 interface Message {
   id: string;
@@ -26,6 +33,7 @@ interface Message {
   error: { message: string } | null;
   media: { status: string; mimeType: string | null; url?: string } | null;
   createdAt: string;
+  aiGenerated: boolean;
 }
 interface Member { userId: string; name: string }
 type Filter = 'all' | 'unread' | 'mine' | 'unassigned';
@@ -37,17 +45,30 @@ const STATUS_LABEL: Record<string, string> = { pending: 'Enviando…', sent: 'En
 export function InboxPage() {
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<Filter>('all');
-  const [selected, setSelected] = useState<string>();
+  // ?c= abre una conversación (los avisos de la campana enlazan así).
+  const search = useSearch({ from: '/inbox' });
+  const navigate = useNavigate();
+  const selected = search.c;
+  const setSelected = (id: string | undefined) => navigate({ to: '/inbox', search: id ? { c: id } : {} });
   const conversations = useQuery({ queryKey: ['conversations', filter], queryFn: () => api<Conversation[]>(`/api/v1/conversations?filter=${filter}`) });
+  // Si la conversación del enlace no entra en el filtro actual, se pide aparte.
+  const inList = conversations.data?.some((c) => c.id === selected);
+  const linked = useQuery({
+    queryKey: ['conversation', selected],
+    queryFn: () => api<Conversation>(`/api/v1/conversations/${selected}`),
+    enabled: Boolean(selected) && conversations.isSuccess && !inList,
+    retry: false,
+  });
   const counts = useQuery({ queryKey: ['conversation-counts'], queryFn: () => api<Record<'unread' | 'mine' | 'unassigned', number>>('/api/v1/conversations/counts') });
 
-  useRealtime(['message.created', 'message.updated', 'conversation.assigned'], (event) => {
+  useRealtime(['message.created', 'message.updated', 'conversation.assigned', 'conversation.updated'], (event) => {
     void queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    void queryClient.invalidateQueries({ queryKey: ['conversation'] });
     void queryClient.invalidateQueries({ queryKey: ['conversation-counts'] });
     if (event.conversationId) void queryClient.invalidateQueries({ queryKey: ['messages', event.conversationId] });
   });
 
-  const current = conversations.data?.find((c) => c.id === selected);
+  const current = conversations.data?.find((c) => c.id === selected) ?? (selected ? linked.data : undefined);
   return (
     <AppShell title="Conversaciones" subtitle="Mensajes de WhatsApp de tus clientes." wide>
       <div role="tablist" aria-label="Filtrar conversaciones" className={`mb-3 flex gap-1 overflow-x-auto ${current ? 'hidden lg:flex' : ''}`}>
@@ -69,21 +90,22 @@ export function InboxPage() {
 
       {conversations.isPending && <p className="text-muted">Cargando conversaciones…</p>}
       {conversations.isError && <Alert>No pudimos cargar las conversaciones. Recarga la página.</Alert>}
-      {conversations.data?.length === 0 && (
+      {conversations.data?.length === 0 && !current && (
         <p className="rounded-xl border border-line bg-surface px-4 py-8 text-center text-muted">
           {filter === 'all' ? 'Todavía no hay conversaciones. Conecta tu número en Configuración y aparecerán los mensajes de tus clientes.' : 'No hay conversaciones con este filtro.'}
         </p>
       )}
-      {Boolean(conversations.data?.length) && (
+      {(Boolean(conversations.data?.length) || current) && (
         <div className="grid gap-4 lg:grid-cols-[18rem_1fr]">
           <ul className={`divide-y divide-line rounded-xl border border-line bg-surface ${current ? 'hidden lg:block' : ''}`}>
-            {conversations.data!.map((c) => (
+            {conversations.data?.map((c) => (
               <li key={c.id}>
                 <button onClick={() => setSelected(c.id)} className={`flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left ${c.id === selected ? 'bg-canvas' : ''}`}>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-medium text-ink">{c.contact.name}</span>
                     <span className="block truncate text-sm text-muted">{c.contact.phone}</span>
                   </span>
+                  {aiPauseState(c).paused && c.aiPauseReason !== 'human_reply' && <Badge tone={c.aiPauseReason === 'manual' ? 'neutral' : 'honey'}>{c.aiPauseReason === 'manual' ? 'IA en pausa' : 'Te necesita'}</Badge>}
                   {c.unreadCount > 0 && <span className="rounded-full bg-honey px-2 py-0.5 text-xs font-semibold text-ink" aria-label={`${c.unreadCount} sin leer`}>{c.unreadCount}</span>}
                 </button>
               </li>
@@ -124,6 +146,7 @@ function Thread({ conversation, onBack }: { conversation: Conversation; onBack: 
         </div>
         <Assignment conversation={conversation} />
       </header>
+      <AiControl conversation={conversation} now={now} />
       <p role="status" className={`px-4 py-2 text-sm ${toneClass}`}>{label.text}</p>
 
       <ol className="flex flex-1 flex-col gap-2 overflow-y-auto p-4">
@@ -135,6 +158,7 @@ function Thread({ conversation, onBack }: { conversation: Conversation; onBack: 
             className={`max-w-[85%] rounded-lg px-3 py-2 ${m.direction === 'out' ? 'self-end bg-honey/25' : m.direction === 'note' ? 'self-center border border-dashed border-line bg-surface' : 'self-start bg-canvas'}`}
           >
             {m.direction === 'note' && <p className="text-xs font-medium text-muted">Nota interna</p>}
+            {m.aiGenerated && <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">✦ Asistente</p>}
             {m.media && <MediaView media={m.media} />}
             {m.body && <p className="whitespace-pre-wrap break-words text-ink">{m.body}</p>}
             <p className="mt-1 text-right text-xs text-muted">
@@ -162,6 +186,43 @@ function MediaView({ media }: { media: NonNullable<Message['media']> }) {
   if (type.startsWith('image/') && type !== 'image/svg+xml') return <img src={media.url} alt="Imagen enviada por el cliente" className="max-h-72 rounded-md" loading="lazy" />;
   if (type.startsWith('video/')) return <video controls preload="none" src={media.url} className="max-h-72 rounded-md" />;
   return <a href={media.url} className="inline-flex min-h-11 items-center text-sm text-ink underline" download>Descargar archivo</a>;
+}
+
+/**
+ * E05-S05 — Estado del asistente en esta conversación y botón para pausarlo o reanudarlo.
+ * Solo aparece si el asistente está activo en la empresa (o si la conversación quedó en pausa).
+ */
+function AiControl({ conversation, now }: { conversation: Conversation; now: Date }) {
+  const queryClient = useQueryClient();
+  const { time, date } = useRegion();
+  const toggle = useMutation({
+    mutationFn: (paused: boolean) => api(`/api/v1/conversations/${conversation.id}/ai`, { method: 'PUT', body: JSON.stringify({ paused }) }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      void queryClient.invalidateQueries({ queryKey: ['conversation'] });
+    },
+  });
+  const state = aiPauseState(conversation, now);
+  if (!conversation.aiAgentEnabled && !state.paused) return null;
+
+  const text = !state.paused
+    ? 'El asistente responde en esta conversación.'
+    : state.until
+      ? `${PAUSE_REASONS[state.reason]}: el asistente vuelve el ${date(state.until.toISOString())} a las ${time(state.until.toISOString())}.`
+      : state.reason === 'manual'
+        ? 'Asistente en pausa hasta que lo reanudes.'
+        : `${PAUSE_REASONS[state.reason]}: el asistente no responde hasta que lo reanudes.`;
+  const tone = !state.paused ? 'bg-honey-soft/50' : state.reason === 'handoff' || state.reason === 'guardrail' ? 'bg-honey-soft' : 'bg-raised';
+  return (
+    <div className={`flex flex-wrap items-center gap-2 border-b border-line px-4 py-2 text-xs ${tone}`}>
+      <span aria-hidden>✦</span>
+      <p role="status" className="min-w-0 flex-1 text-ink">{text}</p>
+      <button onClick={() => toggle.mutate(!state.paused)} disabled={toggle.isPending}
+        className="inline-flex min-h-9 items-center rounded-lg border border-line bg-surface px-3 text-xs font-semibold text-ink hover:bg-honey-soft disabled:opacity-60">
+        {state.paused ? 'Reanudar asistente' : 'Pausar asistente'}
+      </button>
+    </div>
+  );
 }
 
 /** E04-S07 — Propietario/admin asignan a cualquiera; el vendedor toma las libres. */

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type FormEvent, useState } from 'react';
 import { api, ApiError } from '../../shared/api';
+import { SettingsSection } from '../../shared/ui/section';
 import { Alert, Button, Field } from '../../shared/ui/form';
 import { templateVariableCount } from '../inbox/quick-replies';
 
@@ -46,9 +47,7 @@ function Templates() {
   }
 
   return (
-    <section className="mt-10" aria-labelledby="tpl-title">
-      <h2 id="tpl-title" className="text-lg font-semibold text-ink">Plantillas de WhatsApp</h2>
-      <p className="mt-1 text-sm text-muted">Fuera de la ventana de 24 horas solo puedes escribir con plantillas aprobadas por Meta. Usa {'{{1}}'}, {'{{2}}'}… para las variables.</p>
+    <SettingsSection icon="▤" title="Plantillas de WhatsApp" description={<>Fuera de la ventana de 24 horas solo puedes escribir con plantillas aprobadas por Meta. Usa {'{{1}}'}, {'{{2}}'}… para las variables.</>}>
       {templates.isError && <div className="mt-3"><Alert>No pudimos cargar las plantillas.</Alert></div>}
       <ul className="mt-3 divide-y divide-line rounded-xl border border-line bg-surface empty:hidden">
         {templates.data?.map((t) => (
@@ -62,7 +61,7 @@ function Templates() {
         ))}
       </ul>
       {Boolean(channels.data?.length) && (
-        <form onSubmit={onSubmit} className="mt-4 grid gap-3 rounded-xl border border-line bg-surface p-4 sm:grid-cols-2">
+        <form onSubmit={onSubmit} className="mt-4 grid gap-3 rounded-lg border border-line p-3 sm:grid-cols-2">
           <Field label="Nombre (minúsculas y _)" name="name" required pattern="[a-z0-9_]+" />
           <label className="flex flex-col gap-1.5 text-sm font-medium text-ink">
             Número
@@ -89,7 +88,7 @@ function Templates() {
           <div className="sm:col-span-2"><Button type="submit" loading={create.isPending}>Enviar a aprobación</Button></div>
         </form>
       )}
-    </section>
+    </SettingsSection>
   );
 }
 
@@ -113,9 +112,7 @@ function QuickReplies() {
   }
 
   return (
-    <section className="mt-10" aria-labelledby="qr-title">
-      <h2 id="qr-title" className="text-lg font-semibold text-ink">Respuestas rápidas</h2>
-      <p className="mt-1 text-sm text-muted">En la bandeja escribe / y el atajo. Variables: {'{{contact.name}}'}, {'{{contact.phone}}'}, {'{{user.name}}'}.</p>
+    <SettingsSection icon="⚡" title="Respuestas rápidas" description={<>En la bandeja escribe / y el atajo. Variables: {'{{contact.name}}'}, {'{{contact.phone}}'}, {'{{user.name}}'}.</>}>
       <ul className="mt-3 divide-y divide-line rounded-xl border border-line bg-surface empty:hidden">
         {replies.data?.map((r) => (
           <li key={r.id} className="flex items-start gap-3 px-4 py-3">
@@ -127,12 +124,12 @@ function QuickReplies() {
           </li>
         ))}
       </ul>
-      <form onSubmit={onSubmit} className="mt-4 grid gap-3 rounded-xl border border-line bg-surface p-4 sm:grid-cols-[12rem_1fr]">
+      <form onSubmit={onSubmit} className="mt-4 grid gap-3 rounded-lg border border-line p-3 sm:grid-cols-[12rem_1fr]">
         <Field label="Atajo" name="shortcut" required pattern="[a-z0-9_-]+" placeholder="saludo" />
         <Field label="Texto" name="body" required placeholder="Hola {{contact.name}}, ¿en qué te ayudo?" />
         {(create.isError || remove.isError) && <div className="sm:col-span-2"><Alert>{errorText(create.error ?? remove.error)}</Alert></div>}
         <div className="sm:col-span-2"><Button type="submit" loading={create.isPending}>Guardar respuesta</Button></div>
       </form>
-    </section>
+    </SettingsSection>
   );
 }
