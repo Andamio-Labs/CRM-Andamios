@@ -29,6 +29,12 @@ describe('SecretBox (AES-256-GCM)', () => {
     expect(() => box.decrypt(parts.join(':'), ctx)).toThrow();
   });
 
+  it('rechaza un tag truncado: GCM con tag corto es falsificable', () => {
+    const parts = box.encrypt('EAAG-token-secreto', ctx).split(':');
+    parts[3] = Buffer.from(parts[3]!, 'base64url').subarray(0, 4).toString('base64url');
+    expect(() => box.decrypt(parts.join(':'), ctx)).toThrow();
+  });
+
   it('no descifra con otro contexto: copiar el secreto a otro tenant no sirve', () => {
     const encrypted = box.encrypt('EAAG-token-secreto', ctx);
     expect(() => box.decrypt(encrypted, 'tenant-b:whatsapp.access_token')).toThrow();

@@ -18,7 +18,9 @@ export class OriginCheckMiddleware implements NestMiddleware {
 
   use(req: Request, res: Response, next: NextFunction) {
     if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
-    const origin = req.headers.origin ?? (req.headers.referer ? new URL(req.headers.referer).origin : undefined);
+    const { referer } = req.headers;
+    // Un Referer que no es URL no puede venir de la app: cuenta como origen ajeno.
+    const origin = req.headers.origin ?? (referer ? (URL.canParse(referer) ? new URL(referer).origin : 'invalid') : undefined);
     if (origin && origin !== this.env.APP_URL) {
       res.status(HttpStatus.FORBIDDEN).json({ code: 'FORBIDDEN_ORIGIN', message: 'Origen no permitido' });
       return;

@@ -101,9 +101,9 @@ export class PermissionGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const action = this.reflector.getAllAndOverride<Action | undefined>(PERMISSION_KEY, [context.getHandler(), context.getClass()]);
-    if (!action) return true;
+    // Falla cerrado (E13-S07): una ruta sin @RequirePermission es un olvido, no un permiso para todos.
     const role = context.switchToHttp().getRequest<AuthedRequest>().auth?.role;
-    if (!role || !can(role, action)) throw new ForbiddenException('No tienes permiso para esta acción');
+    if (!action || !role || !can(role, action)) throw new ForbiddenException('No tienes permiso para esta acción');
     return true;
   }
 }

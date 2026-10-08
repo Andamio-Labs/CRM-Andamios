@@ -32,6 +32,10 @@ describe('Seguridad (auditoría 001)', () => {
     await team.owner.agent.post('/api/v1/contacts').set('Origin', APP_URL).send({ name: 'Legítimo' }).expect(201);
   });
 
+  it('#5 un Referer malformado se rechaza como origen ajeno, no rompe con 500', async () => {
+    await team.owner.agent.post('/api/v1/contacts').set('Referer', 'no-es-una-url').send({ name: 'Raro' }).expect(403);
+  });
+
   it('#6 responde con cabeceras de seguridad', async () => {
     const res = await t.http().get('/api/health');
     expect(res.headers['x-content-type-options']).toBe('nosniff');

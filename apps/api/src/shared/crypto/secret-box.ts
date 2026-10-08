@@ -7,6 +7,7 @@ export interface Keyring {
 
 const VERSION = 'v1';
 const ALGORITHM = 'aes-256-gcm';
+const TAG_BYTES = 16;
 
 /**
  * E13-S05 — Cifrado autenticado de secretos en reposo.
@@ -43,7 +44,8 @@ export class SecretBox {
     const key = this.ring.keys[keyId];
     if (!key) throw new Error(`No existe la clave "${keyId}" en el keyring: no se puede descifrar`);
 
-    const decipher = createDecipheriv(ALGORITHM, key, Buffer.from(iv, 'base64url'));
+    // Tag de 128 bits obligatorio: Node acepta tags truncados, y uno de 4 bytes se falsifica por fuerza bruta.
+    const decipher = createDecipheriv(ALGORITHM, key, Buffer.from(iv, 'base64url'), { authTagLength: TAG_BYTES });
     decipher.setAAD(Buffer.from(context, 'utf8'));
     decipher.setAuthTag(Buffer.from(tag, 'base64url'));
     return Buffer.concat([decipher.update(Buffer.from(body, 'base64url')), decipher.final()]).toString('utf8');
