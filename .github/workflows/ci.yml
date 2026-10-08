@@ -26,3 +26,24 @@ jobs:
       - run: pnpm typecheck
       # Los tests de la API levantan Postgres real con Testcontainers (Docker viene en el runner).
       - run: pnpm test
+
+  # E13-S07 — Análisis estático y de dependencias. Falla con hallazgos, no con avisos.
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      # Solo dependencias de runtime: lo que llega a producción. Las de desarrollo las cubre Dependabot.
+      - run: pnpm audit --prod --audit-level=high
+      # Semgrep CE (sin cuenta): reglas de TypeScript/Node y detección de secretos versionados.
+      - name: Semgrep
+        run: >
+          docker run --rm -v "$PWD:/src" -w /src semgrep/semgrep
+          semgrep scan --error --metrics off
+          --config p/typescript --config p/javascript --config p/nodejs --config p/secrets
+          apps docker

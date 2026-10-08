@@ -9,7 +9,7 @@ Leyenda: `[x]` hecha · `[~]` parcial (ver nota) · `[ ]` pendiente · ⏸ difer
 <!-- progreso -->
 | Fase | Hechas | Puntos hechos |
 |---|---|---|
-| MVP | 47 / 65 (+11 parciales) | 255 / 386 |
+| MVP | 47 / 65 (+12 parciales) | 255 / 386 |
 | Fase-2 | 1 / 41 | 3 / 298 |
 | Fase-3 | 0 / 21 | 0 / 264 |
 | **Total** | **48 / 127** | **258 / 948** |
@@ -183,7 +183,8 @@ Leyenda: `[x]` hecha · `[~]` parcial (ver nota) · `[ ]` pendiente · ⏸ difer
 
 ## Sprint 9 — MVP · 5 pts
 
-- [ ] **E13-S07** (5p) Pruebas de seguridad previas al lanzamiento — _Análisis estático y de dependencias en CI; pruebas de penetración antes de abrir a clientes._
+- [~] **E13-S07** (5p) Pruebas de seguridad previas al lanzamiento — _Análisis estático y de dependencias en CI; pruebas de penetración antes de abrir a clientes._
+  - ✅ CI: `pnpm audit --prod` (alto/crítico), Semgrep CE, Dependabot. Revisión de código con 5 correcciones e inventario de rutas en tests (ver `docs/seguridad.md`). ⏸ Pentest externo contra el entorno desplegado.
 
 ## Sprint 10 — Fase-2 · 47 pts
 

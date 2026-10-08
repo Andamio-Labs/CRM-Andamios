@@ -9,3 +9,6 @@ coverage/
 backups/
 
 storage/
+
+# Tipos generados por Astro
+apps/landing/.astro/
