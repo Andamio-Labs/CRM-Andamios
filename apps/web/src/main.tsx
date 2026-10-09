@@ -5,6 +5,10 @@ import { createRoot } from 'react-dom/client';
 import { router } from './router';
 import './styles.css';
 
+const storedTheme = window.localStorage.getItem('beecrm-theme');
+document.documentElement.dataset.theme = storedTheme === 'light' ? 'light' : 'dark';
+document.documentElement.style.colorScheme = storedTheme === 'light' ? 'light' : 'dark';
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

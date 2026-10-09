@@ -58,4 +58,18 @@ describe('loadEnv en producción', () => {
   it('fuera de producción sigue usando los simuladores por defecto', () => {
     expect(loadEnv({ NODE_ENV: 'development' })).toMatchObject({ WOMPI_API: 'local', WHATSAPP_API: 'local', WOMPI_URL: 'https://sandbox.wompi.co/v1' });
   });
+
+  it('acepta variables opcionales vacías inyectadas por Docker cuando el proveedor está apagado o local', () => {
+    expect(loadEnv({
+      NODE_ENV: 'development',
+      LLM_API: 'local',
+      LLM_BASE_URL: '',
+      LLM_API_KEY: '',
+      LLM_MODEL: '',
+      EMBEDDINGS_API: 'local',
+      EMBEDDINGS_BASE_URL: '',
+      EMBEDDINGS_API_KEY: '',
+      EMBEDDINGS_MODEL: '',
+    })).toMatchObject({ LLM_API: 'local', EMBEDDINGS_API: 'local' });
+  });
 });

@@ -24,6 +24,21 @@
   --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
+:root[data-theme='dark'] {
+  --color-honey-soft: #3b3010;
+  --color-ink: #f3f1ec;
+  --color-muted: #a9a7ae;
+  --color-canvas: #0b0b0e;
+  --color-raised: #1a191d;
+  --color-surface: #141419;
+  --color-line: #2d2c33;
+  --color-danger: #ff8b82;
+  --color-danger-soft: #3b1e22;
+  --color-success: #70d39b;
+  --color-success-soft: #173728;
+  --color-info-soft: #172943;
+}
+
 .bee-mark {
   position: relative;
   display: block;
@@ -57,5 +72,27 @@
 body {
   background: var(--color-canvas);
   color: var(--color-ink);
+  color-scheme: inherit;
   -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  color: inherit;
+}
+
+::selection {
+  background: var(--color-honey);
+  color: var(--color-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

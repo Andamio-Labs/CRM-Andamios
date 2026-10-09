@@ -5,14 +5,14 @@ export function Field({ label, error, auth = false, ...input }: InputHTMLAttribu
   const id = useId();
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-medium text-auth-muted">
+      <label htmlFor={id} className={`text-sm font-medium ${auth ? 'text-auth-muted' : 'text-muted'}`}>
         {label}
       </label>
       <input
         id={id}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? `${id}-error` : undefined}
-        className={`h-11 rounded-lg border px-3 outline-none transition focus:border-honey focus:ring-2 focus:ring-honey/30 aria-[invalid=true]:border-danger ${auth ? 'border-auth-line bg-auth-input text-auth-text placeholder:text-auth-muted' : 'border-line bg-surface text-ink'}`}
+         className={`h-11 rounded-lg border px-3 outline-none transition focus:border-honey focus:ring-2 focus:ring-honey/30 aria-[invalid=true]:border-danger ${auth ? 'border-auth-line bg-auth-input text-auth-text placeholder:text-auth-muted' : 'border-line bg-surface text-ink placeholder:text-muted'}`}
         {...input}
       />
       {error && (

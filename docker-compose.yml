@@ -19,7 +19,7 @@ services:
       POSTGRES_DB: beecrm
       POSTGRES_USER: beecrm_owner
       POSTGRES_PASSWORD: beecrm_owner
-    ports: ["5442:5432"]
+    ports: ["127.0.0.1:5442:5432"]
     volumes:
       - pg_data:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -30,7 +30,7 @@ services:
 
   valkey:
     image: valkey/valkey:8-alpine
-    ports: ["6380:6379"]
+    ports: ["127.0.0.1:6380:6379"]
     healthcheck:
       test: ["CMD", "valkey-cli", "ping"]
       interval: 3s
@@ -39,7 +39,7 @@ services:
   # Bandeja de correo local: todo email (verificación, recupero) cae acá → http://localhost:8025
   mailpit:
     image: axllent/mailpit:latest
-    ports: ["1025:1025", "8025:8025"]
+    ports: ["127.0.0.1:1025:1025", "127.0.0.1:8025:8025"]
 
   # Instala dependencias una sola vez, para que api y web no se pisen.
   deps:
@@ -67,7 +67,7 @@ services:
       EMBEDDINGS_API: ${EMBEDDINGS_API:-local}
       EMBEDDINGS_BASE_URL: ${EMBEDDINGS_BASE_URL:-}
       EMBEDDINGS_MODEL: ${EMBEDDINGS_MODEL:-}
-    ports: ["3000:3000"]
+    ports: ["127.0.0.1:3000:3000"]
     depends_on:
       deps: { condition: service_completed_successfully }
       postgres: { condition: service_healthy }
@@ -79,7 +79,7 @@ services:
     command: pnpm --filter @beecrm/web dev --host 0.0.0.0
     environment:
       API_PROXY_TARGET: http://api:3000
-    ports: ["5173:5173"]
+    ports: ["127.0.0.1:5173:5173"]
     depends_on:
       deps: { condition: service_completed_successfully }
 
@@ -108,7 +108,7 @@ services:
   ollama:
     image: ollama/ollama:latest
     profiles: [ia]
-    ports: ["11434:11434"]
+    ports: ["127.0.0.1:11434:11434"]
     volumes:
       - ollama:/root/.ollama
 
@@ -116,7 +116,7 @@ services:
   prometheus:
     image: prom/prometheus:latest
     profiles: [observability]
-    ports: ["9090:9090"]
+    ports: ["127.0.0.1:9090:9090"]
     extra_hosts: ["host.docker.internal:host-gateway"]
     volumes:
       - ./docker/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
@@ -125,10 +125,9 @@ services:
   grafana:
     image: grafana/grafana:latest
     profiles: [observability]
-    ports: ["3001:3000"]
+    ports: ["127.0.0.1:3001:3000"]
     environment:
-      GF_AUTH_ANONYMOUS_ENABLED: "true"
-      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
     volumes:
       - ./docker/observability/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./docker/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro

@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
 const isProduction = (source: Record<string, string | undefined>) => source.NODE_ENV === 'production';
+const optionalString = z.preprocess((value) => value === '' ? undefined : value, z.string().min(1).optional());
+const optionalUrl = z.preprocess((value) => value === '' ? undefined : value, z.url().optional());
 
 /**
  * Configuración validada al arrancar: si falta algo, la API no levanta (fail fast).
@@ -57,9 +59,9 @@ export function loadEnv(source: Record<string, string | undefined> = process.env
       // E05 IA. "openai" = cualquier API compatible con OpenAI: Groq (https://api.groq.com/openai/v1),
       // DeepSeek (https://api.deepseek.com) u Ollama local. "local" simula el modelo en desarrollo.
       LLM_API: z.enum(['none', 'openai', 'local']).default('none'),
-      LLM_BASE_URL: z.url().optional(),
-      LLM_API_KEY: z.string().min(1).optional(),
-      LLM_MODEL: z.string().min(1).optional(),
+      LLM_BASE_URL: optionalUrl,
+      LLM_API_KEY: optionalString,
+      LLM_MODEL: optionalString,
       // Precio en USD por millón de tokens, para el registro de costos (E05-S08).
       LLM_PRICE_INPUT_PER_MTOK: z.coerce.number().min(0).default(0),
       LLM_PRICE_OUTPUT_PER_MTOK: z.coerce.number().min(0).default(0),
@@ -67,9 +69,9 @@ export function loadEnv(source: Record<string, string | undefined> = process.env
       LLM_TIMEOUT_MS: z.coerce.number().int().min(1000).max(30_000).default(8000),
       // Embeddings: ni Groq ni DeepSeek los ofrecen; se usa un modelo local (p. ej. bge-m3 en Ollama, 1024 dimensiones).
       EMBEDDINGS_API: z.enum(['none', 'openai', 'local']).default('none'),
-      EMBEDDINGS_BASE_URL: z.url().optional(),
-      EMBEDDINGS_API_KEY: z.string().min(1).optional(),
-      EMBEDDINGS_MODEL: z.string().min(1).optional(),
+      EMBEDDINGS_BASE_URL: optionalUrl,
+      EMBEDDINGS_API_KEY: optionalString,
+      EMBEDDINGS_MODEL: optionalString,
     })
     .superRefine((env, ctx) => {
       const require = (key: keyof typeof env, why: string) => {

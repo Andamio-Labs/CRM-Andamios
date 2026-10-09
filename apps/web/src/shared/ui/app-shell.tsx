@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { authClient } from '../auth-client';
 import { useRegion } from '../i18n/use-region';
 import type { MessageKey } from '../i18n/messages';
+import { useTheme } from '../use-theme';
 import { AccountBanner, CommandPalette, NotificationsBell } from './shell-widgets';
 
 type NavTo = '/' | '/tasks' | '/reports' | '/deals' | '/inbox' | '/contacts' | '/team' | '/settings';
@@ -35,7 +36,7 @@ const NAV_ICONS: Record<NavTo, string> = {
 function Logo() {
   return (
     <div className="flex items-center gap-2 font-bold tracking-tight text-ink">
-      <span className="grid size-7 place-items-center rounded-md bg-ink text-sm text-honey">⌂</span>
+      <span className="grid size-7 place-items-center rounded-md bg-honey text-sm text-ink"><span className="bee-mark" aria-hidden="true"><span /><span /></span></span>
       <span>BeeCRM</span>
     </div>
   );
@@ -46,6 +47,7 @@ export function AppShell({ title, subtitle, wide, children }: { title: string; s
   const width = wide ? 'max-w-none' : 'max-w-3xl';
   const navigate = useNavigate();
   const { t } = useRegion();
+  const { theme, toggleTheme } = useTheme();
   async function signOut() {
     await authClient.signOut();
     navigate({ to: '/login' });
@@ -88,6 +90,15 @@ export function AppShell({ title, subtitle, wide, children }: { title: string; s
             <div className="ml-auto flex items-center gap-1">
               <CommandPalette />
               <NotificationsBell />
+              <button
+                type="button"
+                onClick={toggleTheme}
+                aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+                title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+                className="grid min-h-10 min-w-10 place-items-center rounded-lg border border-line text-base text-muted transition hover:bg-raised hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-honey"
+              >
+                <span aria-hidden>{theme === 'dark' ? '☀' : '☾'}</span>
+              </button>
               <button onClick={signOut} className="inline-flex min-h-11 items-center px-2 text-sm text-muted underline md:hidden">
                 {t('nav.signOut')}
               </button>
