@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 const isProduction = (source: Record<string, string | undefined>) => source.NODE_ENV === 'production';
 const optionalString = z.preprocess((value) => value === '' ? undefined : value, z.string().min(1).optional());
+const emptyAsMissing = (value: unknown) => (value === '' ? undefined : value);
 const optionalUrl = z.preprocess((value) => value === '' ? undefined : value, z.url().optional());
 
 /**
@@ -21,6 +22,11 @@ export function loadEnv(source: Record<string, string | undefined> = process.env
       REDIS_URL: devDefault('redis://localhost:6380'),
       SMTP_HOST: devDefault('localhost'),
       SMTP_PORT: z.coerce.number().int().default(1025),
+      // Proveedor transaccional en producción (SES, Resend, Postmark, Brevo). Vacío = Mailpit sin autenticación.
+      SMTP_USER: optionalString,
+      SMTP_PASS: optionalString,
+      // true = TLS directo (puerto 465). false + usuario = STARTTLS obligatorio (puerto 587).
+      SMTP_SECURE: z.preprocess(emptyAsMissing, z.stringbool().default(false)),
       MAIL_FROM: z.string().default('BeeCRM <no-reply@beecrm.local>'),
       BETTER_AUTH_SECRET: devDefault('dev-only-secret-change-me-dev-only-secret').pipe(z.string().min(32)),
       // E13-S05 Keyring "id:base64(32 bytes),id:base64". Rotar: agregar clave nueva y cambiar la activa.
@@ -75,12 +81,18 @@ export function loadEnv(source: Record<string, string | undefined> = process.env
       EMBEDDINGS_BASE_URL: optionalUrl,
       EMBEDDINGS_API_KEY: optionalString,
       EMBEDDINGS_MODEL: optionalString,
+      // Web Push (VAPID). Sin llaves, el canal Push queda apagado. Generar: npx web-push generate-vapid-keys
+      VAPID_PUBLIC_KEY: isProduction(source) ? optionalString : z.preprocess(emptyAsMissing, z.string().min(1).default('BPghXMYzhpTvfaKdI9RVyzBBQcFKYKlhyCn_U5pRT15xYPT3BASOkChgmFNyoAaJ5bdE7KldxGJQWoIxPGk8HN8')),
+      VAPID_PRIVATE_KEY: isProduction(source) ? optionalString : z.preprocess(emptyAsMissing, z.string().min(1).default('omf64rnZj4uL9H5R6Or-zky0zgWnsdvu5yp3dLZd4uI')),
+      VAPID_SUBJECT: z.string().regex(/^(mailto:|https:)/).default('mailto:soporte@beecrm.co'),
     })
     .superRefine((env, ctx) => {
       const require = (key: keyof typeof env, why: string) => {
         if (!env[key]) ctx.addIssue({ code: 'custom', path: [key], message: `${key} es obligatoria ${why}` });
       };
       if (env.LLM_API === 'openai') for (const key of ['LLM_BASE_URL', 'LLM_MODEL', 'LLM_API_KEY'] as const) require(key, 'con LLM_API=openai');
+      if (Boolean(env.SMTP_USER) !== Boolean(env.SMTP_PASS)) ctx.addIssue({ code: 'custom', path: ['SMTP_PASS'], message: 'SMTP_USER y SMTP_PASS van juntas' });
+      if (Boolean(env.VAPID_PUBLIC_KEY) !== Boolean(env.VAPID_PRIVATE_KEY)) ctx.addIssue({ code: 'custom', path: ['VAPID_PRIVATE_KEY'], message: 'VAPID_PUBLIC_KEY y VAPID_PRIVATE_KEY van juntas' });
       if (env.EMBEDDINGS_API === 'openai') for (const key of ['EMBEDDINGS_BASE_URL', 'EMBEDDINGS_MODEL'] as const) require(key, 'con EMBEDDINGS_API=openai');
 
       // E13-S07: los simuladores aprueban cobros, mensajes y respuestas sin hablar con nadie.

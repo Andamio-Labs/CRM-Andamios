@@ -4,6 +4,13 @@
 @theme {
   --color-honey: #f5b700;
   --color-honey-soft: #fdf3d0;
+  /* Texto sobre miel sólido: oscuro en los dos temas. */
+  --color-on-honey: #1f2933;
+  /* Naranja del degradado del CTA "Crear empresa" y del ícono de tienda. */
+  --color-honey-deep: #f08c00;
+  /* Miel como texto: oscurecida en claro para que se lea sobre blanco. */
+  --color-honey-ink: #8a6500;
+  --color-info: #2f6fdb;
   --color-ink: #1f2933;
   --color-muted: #616e7c;
   --color-canvas: #f7f5ef;
@@ -27,6 +34,8 @@
 
 :root[data-theme='dark'] {
   --color-honey-soft: #3b3010;
+  --color-honey-ink: #f5b700;
+  --color-info: #3b82f6;
   --color-ink: #f3f1ec;
   --color-muted: #a9a7ae;
   --color-canvas: #0b0b0e;

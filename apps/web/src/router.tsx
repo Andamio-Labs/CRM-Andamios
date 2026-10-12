@@ -10,6 +10,7 @@ import { MeetingsPage } from './features/meetings/MeetingsPage';
 import { TasksPage } from './features/tasks/TasksPage';
 import { LegalPage } from './features/legal/legal';
 import { PipelinePage } from './features/pipeline/PipelinePage';
+import { ProfilePage } from './features/profile/ProfilePage';
 import { CompanySettingsPage } from './features/settings/CompanySettingsPage';
 import { AcceptInvitationPage } from './features/team/AcceptInvitationPage';
 import { TeamPage } from './features/team/TeamPage';
@@ -29,6 +30,7 @@ const routes = [
   createRoute({ getParentRoute: () => rootRoute, path: '/forgot-password', component: ForgotPasswordPage }),
   createRoute({ getParentRoute: () => rootRoute, path: '/reset-password', component: ResetPasswordPage }),
   createRoute({ getParentRoute: () => rootRoute, path: '/settings', beforeLoad: requireSession, component: CompanySettingsPage, validateSearch: (s: Record<string, unknown>): { tab?: string } => (typeof s.tab === 'string' ? { tab: s.tab } : {}) }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/profile', beforeLoad: requireSession, component: ProfilePage, validateSearch: (s: Record<string, unknown>): { tab?: string } => (typeof s.tab === 'string' ? { tab: s.tab } : {}) }),
   createRoute({ getParentRoute: () => rootRoute, path: '/team', beforeLoad: requireSession, component: TeamPage }),
   createRoute({ getParentRoute: () => rootRoute, path: '/deals', beforeLoad: requireSession, component: PipelinePage }),
   createRoute({ getParentRoute: () => rootRoute, path: '/contacts', beforeLoad: requireSession, component: ContactsPage }),

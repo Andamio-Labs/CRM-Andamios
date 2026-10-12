@@ -470,7 +470,19 @@ export const notificationPreferences = pgTable('notification_preferences', {
   type: text('type').notNull(),
   inApp: boolean('in_app').notNull(),
   email: boolean('email').notNull(),
+  push: boolean('push').notNull().default(true),
 }, (t) => [primaryKey({ columns: [t.tenantId, t.userId, t.type] })]);
+
+/** Web Push: una suscripción por navegador o teléfono. */
+export const pushSubscriptions = pgTable('push_subscriptions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: text('tenant_id').notNull(),
+  userId: text('user_id').notNull(),
+  endpoint: text('endpoint').notNull(),
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});
 
 export const importJobs = pgTable('import_jobs', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -564,3 +576,28 @@ export const meetings = pgTable('meetings', {
 
 /** Tabla de Better Auth: solo lectura de id y nombre para mostrar responsables. La gestiona identity. */
 export const user = pgTable('user', { id: text('id').primaryKey(), name: text('name').notNull(), email: text('email').notNull() });
+
+// ── E01-S10 Multiempresa y perfil ────────────────────────────────────────
+// tenant_settings.join_code NO se mapea en `tenantSettings`: el GET de configuración devuelve la fila
+// completa y lo vería un vendedor. Se lee solo en CompaniesService, según permisos.
+
+export const joinRequests = pgTable('join_requests', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: text('tenant_id').notNull(),
+  userId: text('user_id').notNull(),
+  status: text('status').$type<'pending' | 'approved' | 'rejected' | 'canceled'>().notNull().default('pending'),
+  decidedBy: text('decided_by'),
+  decidedAt: ts('decided_at'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});
+
+/** Perfil personal: de la persona, no de una empresa. Sin RLS (no tiene tenant). */
+export const userProfiles = pgTable('user_profiles', {
+  userId: text('user_id').primaryKey(),
+  position: text('position'),
+  phone: text('phone'),
+  address: text('address'),
+  bio: text('bio'),
+  avatarKey: text('avatar_key'),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+});

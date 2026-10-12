@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { effectivePresence, mutesEmail, takesNewLeads } from './presence.js';
+import { effectivePresence, mutesAlerts, takesNewLeads } from './presence.js';
 
 const now = new Date('2026-10-08T15:00:00Z');
 const later = new Date('2026-10-08T16:00:00Z');
@@ -21,11 +21,11 @@ describe('Estado del empleado (E01-S09)', () => {
     expect(['online', 'visit', 'dnd', 'offline'].filter((s) => takesNewLeads(s as never))).toEqual(['online', 'visit']);
   });
 
-  it('no molestar y desconectado elegidos silencian el correo mientras duran', () => {
-    expect(mutesEmail({ status: 'dnd', until: later }, now)).toBe(true);
-    expect(mutesEmail({ status: 'offline', until: null }, now)).toBe(true);
-    expect(mutesEmail({ status: 'dnd', until: earlier }, now)).toBe(false);
-    expect(mutesEmail({ status: 'visit', until: null }, now)).toBe(false);
-    expect(mutesEmail(undefined, now)).toBe(false);
+  it('no molestar y desconectado elegidos silencian push y correo mientras duran', () => {
+    expect(mutesAlerts({ status: 'dnd', until: later }, now)).toBe(true);
+    expect(mutesAlerts({ status: 'offline', until: null }, now)).toBe(true);
+    expect(mutesAlerts({ status: 'dnd', until: earlier }, now)).toBe(false);
+    expect(mutesAlerts({ status: 'visit', until: null }, now)).toBe(false);
+    expect(mutesAlerts(undefined, now)).toBe(false);
   });
 });

@@ -45,23 +45,27 @@ describe('Estado del empleado (E01-S09)', () => {
     expect(await statusOf(team.seller.userId)).toMatchObject({ status: 'online', until: null });
   });
 
-  it('con no molestar, los avisos esperan en la campana y no salen por correo', async () => {
+  it('con no molestar, los avisos esperan en la campana: ni push ni correo', async () => {
     const contactId = (await team.owner.api.post('/api/v1/contacts', { name: 'Cliente de estados' }).expect(201)).body.id;
     const remindSeller = async (title: string) => {
       await team.owner.api.post('/api/v1/tasks', { title, contactId, assigneeId: team.seller.userId, dueAt: new Date(Date.now() + 5 * 60_000).toISOString(), remindBeforeMinutes: 10 }).expect(201);
       await t.app.get(TasksService).sendDueReminders();
     };
     const mails = (title: string) => t.mailer.sent.filter((m) => m.to === team.seller.email && m.subject.includes(title));
+    const pushes = (title: string) => t.push.sent.filter((p) => p.endpoint === 'https://push.example/estados' && p.payload.title.includes(title));
+    await team.seller.api.post('/api/v1/notifications/push/subscriptions', { endpoint: 'https://push.example/estados', keys: { p256dh: 'clave-p256dh', auth: 'clave-auth' } }).expect(204);
 
     await team.seller.api.put('/api/v1/presence', { status: 'dnd' }).expect(200);
     await remindSeller('Llamar en silencio');
     expect(mails('Llamar en silencio')).toHaveLength(0);
+    expect(pushes('Llamar en silencio')).toHaveLength(0);
     const bell = (await team.seller.api.get('/api/v1/notifications').expect(200)).body.items;
     expect(bell.some((x: { title: string }) => x.title.includes('Llamar en silencio'))).toBe(true);
 
     await team.seller.api.put('/api/v1/presence', { status: 'online' }).expect(200);
     await remindSeller('Llamar con aviso');
     expect(mails('Llamar con aviso')).toHaveLength(1);
+    expect(pushes('Llamar con aviso')).toHaveLength(1);
   });
 
   it('la asignación automática omite a quien está en no molestar', async () => {

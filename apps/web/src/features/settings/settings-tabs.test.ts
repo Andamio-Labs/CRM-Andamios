@@ -10,6 +10,7 @@ describe('Pestañas de configuración', () => {
 
   it('lee la pestaña de la URL y cae en General si no existe o no le corresponde', () => {
     expect(tabFrom('ia', 'owner')).toBe('ia');
+    expect(tabFrom('notificaciones', 'member')).toBe('general');
     expect(tabFrom('plan', 'admin')).toBe('general');
     expect(tabFrom('inventada', 'owner')).toBe('general');
     expect(tabFrom(undefined, 'member')).toBe('general');

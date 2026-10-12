@@ -17,8 +17,8 @@ export interface Presence {
 export const PRESENCE: Record<PresenceStatus, { label: string; hint: string; dot: string }> = {
   online: { label: 'En línea', hint: 'Recibes avisos y leads nuevos como siempre.', dot: 'bg-success' },
   visit: { label: 'En visita', hint: 'En una reunión o visita: respondes con demora. Avisos y leads como siempre.', dot: 'bg-info' },
-  dnd: { label: 'No molestar', hint: 'Los avisos esperan en la campana, sin correo. No te asignamos leads nuevos.', dot: 'bg-danger' },
-  offline: { label: 'Desconectado', hint: 'Fuera del trabajo: los avisos esperan en la campana y no te asignamos leads nuevos.', dot: 'bg-muted' },
+  dnd: { label: 'No molestar', hint: 'Los avisos esperan en la campana, sin push ni correo. No te asignamos leads nuevos.', dot: 'bg-danger' },
+  offline: { label: 'Desconectado', hint: 'Fuera del trabajo: los avisos esperan en la campana, sin push ni correo, y no te asignamos leads nuevos.', dot: 'bg-muted' },
 };
 
 export const PRESENCE_ORDER: PresenceStatus[] = ['online', 'visit', 'dnd', 'offline'];

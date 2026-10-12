@@ -12,16 +12,14 @@ import {
 } from '../../features/team/presence';
 import { authClient } from '../auth-client';
 import { useRegion } from '../i18n/use-region';
+import { initials } from '../initials';
 import { Segmented } from './section';
 
-function initials(name: string) {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  const letters = words.length > 1 ? `${words[0]![0]}${words[1]![0]}` : (words[0] ?? '?').slice(0, 2);
-  return letters.toUpperCase();
-}
-
-/** E01-S09 — Avatar con tu estado (en línea, en visita, no molestar, desconectado) y cuánto dura. */
-export function ProfileMenu({ onSignOut }: { onSignOut: () => void }) {
+/**
+ * E01-S09 — Avatar con tu estado (en línea, en visita, no molestar, desconectado) y cuánto dura.
+ * `rail`: en el rail derecho de desktop; el panel se abre hacia la izquierda.
+ */
+export function ProfileMenu({ onSignOut, placement = 'header' }: { onSignOut: () => void; placement?: 'header' | 'rail' }) {
   const session = authClient.useSession();
   const { time } = useRegion();
   const team = useTeamPresence();
@@ -66,11 +64,11 @@ export function ProfileMenu({ onSignOut }: { onSignOut: () => void }) {
         aria-label={`Tu perfil. Estado: ${PRESENCE[status].label}`}
         className="relative grid min-h-10 min-w-10 place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-honey"
       >
-        <span className="grid size-8 place-items-center rounded-full bg-honey text-[11px] font-bold text-ink">{initials(user?.name || user?.email || '?')}</span>
-        <PresenceDot status={status} className="absolute bottom-1 right-1 size-2.5 ring-2 ring-surface" />
+        <span className={`grid place-items-center rounded-full bg-honey font-bold text-on-honey ${placement === 'rail' ? 'size-9 text-xs' : 'size-8 text-[11px]'}`}>{initials(user?.name || user?.email || '?')}</span>
+        <PresenceDot status={status} className="absolute bottom-0.5 right-0.5 size-3 ring-2 ring-surface" />
       </button>
       {open && (
-        <div className="absolute right-0 z-20 mt-2 w-[min(21rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-line bg-surface text-left shadow-lg">
+        <div className={`z-30 w-[min(21rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-line bg-surface text-left shadow-lg ${placement === 'rail' ? 'fixed right-[4.25rem] top-2' : 'absolute right-0 mt-2'}`}>
           <div className="border-b border-line px-4 py-3">
             <p className="truncate text-sm font-semibold text-ink">{user?.name}</p>
             <p className="truncate text-xs text-muted">{user?.email}</p>
@@ -111,8 +109,11 @@ export function ProfileMenu({ onSignOut }: { onSignOut: () => void }) {
           </div>
 
           <div className="border-t border-line p-1">
-            <Link to="/settings" onClick={() => setOpen(false)} className="flex min-h-10 items-center rounded-lg px-3 text-xs text-ink hover:bg-canvas">
-              Configuración y mis avisos
+            <Link to="/profile" onClick={() => setOpen(false)} className="flex min-h-10 items-center rounded-lg px-3 text-xs text-ink hover:bg-canvas">
+              Mi perfil
+            </Link>
+            <Link to="/profile" search={{ tab: 'notificaciones' }} onClick={() => setOpen(false)} className="flex min-h-10 items-center rounded-lg px-3 text-xs text-ink hover:bg-canvas">
+              Mis notificaciones
             </Link>
             <button type="button" onClick={onSignOut} className="flex min-h-10 w-full items-center rounded-lg px-3 text-xs text-muted hover:bg-canvas hover:text-danger">
               Cerrar sesión

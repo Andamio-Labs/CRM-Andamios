@@ -23,10 +23,10 @@ export function effectivePresence(stored: StoredPresence | undefined, hasSession
 export const takesNewLeads = (status: PresenceStatus) => status === 'online' || status === 'visit';
 
 /**
- * No molestar o desconectado ELEGIDOS a mano: los avisos esperan en la campana, sin correo.
- * Cerrar sesión no cuenta: el correo es justamente lo que avisa a quien no está en la app.
+ * No molestar o desconectado ELEGIDOS a mano: los avisos esperan en la campana, sin push ni correo.
+ * Cerrar sesión no cuenta: push y correo son justamente lo que avisa a quien no está en la app.
  */
-export function mutesEmail(stored: StoredPresence | undefined, now: Date): boolean {
+export function mutesAlerts(stored: StoredPresence | undefined, now: Date): boolean {
   if (!stored || (stored.until && stored.until <= now)) return false;
   return stored.status === 'dnd' || stored.status === 'offline';
 }
