@@ -4,9 +4,10 @@ import { authClient } from '../auth-client';
 import { useRegion } from '../i18n/use-region';
 import type { MessageKey } from '../i18n/messages';
 import { useTheme } from '../use-theme';
+import { ProfileMenu } from './profile-menu';
 import { AccountBanner, CommandPalette, NotificationsBell } from './shell-widgets';
 
-type NavTo = '/' | '/tasks' | '/reports' | '/deals' | '/inbox' | '/contacts' | '/team' | '/settings';
+type NavTo = '/' | '/tasks' | '/meetings' | '/reports' | '/deals' | '/inbox' | '/contacts' | '/team' | '/settings';
 
 const MAIN_NAV: { to: NavTo; label: MessageKey }[] = [
   { to: '/', label: 'nav.home' },
@@ -14,6 +15,7 @@ const MAIN_NAV: { to: NavTo; label: MessageKey }[] = [
   { to: '/inbox', label: 'nav.inbox' },
   { to: '/contacts', label: 'nav.contacts' },
   { to: '/tasks', label: 'nav.tasks' },
+  { to: '/meetings', label: 'nav.meetings' },
   { to: '/reports', label: 'nav.reports' },
 ];
 
@@ -28,6 +30,7 @@ const NAV_ICONS: Record<NavTo, string> = {
   '/inbox': '▤',
   '/contacts': '♙',
   '/tasks': '☑',
+  '/meetings': '◉',
   '/reports': '▥',
   '/team': '♧',
   '/settings': '⚙',
@@ -99,9 +102,7 @@ export function AppShell({ title, subtitle, wide, children }: { title: string; s
               >
                 <span aria-hidden>{theme === 'dark' ? '☀' : '☾'}</span>
               </button>
-              <button onClick={signOut} className="inline-flex min-h-11 items-center px-2 text-sm text-muted underline md:hidden">
-                {t('nav.signOut')}
-              </button>
+              <ProfileMenu onSignOut={signOut} />
             </div>
           </div>
           <nav aria-label="Principal" className="flex min-w-0 max-w-full gap-1 overflow-x-auto overscroll-x-contain px-3 pb-2 md:hidden">

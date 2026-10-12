@@ -51,3 +51,5 @@ asignados a él. Los repositorios aplican `recordVisibility(role, settings)`.
 - Nadie puede quitar ni degradar al propietario.
 - Un admin solo puede quitar vendedores, nunca a otro admin.
 - Nadie se cambia el rol a sí mismo.
+- Reuniones (E12-S03): cada persona ve las que organiza o a las que la invitaron; cualquiera de ellas completa el acta y la grabación. Cancela quien organiza, el propietario o un admin.
+- Estado del empleado (E01-S09): cada persona cambia solo el suyo; todo el equipo ve el estado y el nombre de los demás.

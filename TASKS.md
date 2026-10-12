@@ -11,8 +11,8 @@ Leyenda: `[x]` hecha · `[~]` parcial (ver nota) · `[ ]` pendiente · ⏸ difer
 |---|---|---|
 | MVP | 55 / 65 (+10 parciales) | 305 / 386 |
 | Fase-2 | 1 / 41 | 3 / 298 |
-| Fase-3 | 0 / 21 | 0 / 264 |
-| **Total** | **56 / 127** | **308 / 948** |
+| Fase-3 | 1 / 21 (+1 parcial) | 3 / 264 |
+| **Total** | **57 / 127** | **311 / 948** |
 <!-- /progreso -->
 
 Última actualización: 2026-10-08 · Tests: 559 API + 55 web, todos en verde. Sprints 0 a 8 cerrados salvo lo que depende de algo externo: proveedor de IA real (E05-S03 latencia), Wompi sandbox (E10-S03), Meta (E04-S01), abogado (E13-S01) y despliegue (E15).
@@ -265,7 +265,9 @@ Leyenda: `[x]` hecha · `[~]` parcial (ver nota) · `[ ]` pendiente · ⏸ difer
 - [ ] **E12-S01** (13p) Llamadas desde la ficha y registro — _Click-to-call con proveedor VoIP; registro de llamadas en la línea de tiempo._
 - [ ] **E12-S02** (13p) Grabación, transcripción y resumen — _Cada llamada genera un resumen con acuerdos y próximo paso._
 - [ ] **E05-S14** (5p) Reporte semanal de IA al propietario — _Resumen semanal de ventas y pendientes enviado por correo o WhatsApp._
-- [ ] **E01-S09** (3p) Estado del empleado y asignación consciente — _Estados en línea/ausente/no molestar; la asignación automática omite a quienes no están disponibles._
+- [x] **E01-S09** (3p) Estado del empleado y asignación consciente — _Estados en línea/ausente/no molestar; la asignación automática omite a quienes no están disponibles._
+  - ✅ Adelantada (2026-10-08): en línea, en visita, no molestar y desconectado desde el avatar, con duración (1 hora, fin del día, hasta cambiarlo). Sin sesión abierta = desconectado. El reparto por turnos salta a quien está en no molestar o desconectado; con esos estados los avisos esperan en la campana, sin correo (los de cobro salen igual).
+  - ✔ Tests: `test/presence.spec.ts`, `src/modules/team/domain/presence.spec.ts` y reparto en `sprint5-domain.spec.ts`.
 
 ## Sprint 19 — Fase-3 · 47 pts
 
@@ -278,7 +280,9 @@ Leyenda: `[x]` hecha · `[~]` parcial (ver nota) · `[ ]` pendiente · ⏸ difer
 ## Sprint 20 — Fase-3 · 47 pts
 
 - [ ] **E05-S13** (13p) Asistente interno en lenguaje natural — _Consultas del equipo sobre sus datos con permisos por rol; toda acción exige confirmación explícita._
-- [ ] **E12-S03** (21p) Chat interno y reuniones — _Mensajería y videollamadas dentro del CRM con el negocio adjunto._
+- [~] **E12-S03** (21p) Chat interno y reuniones — _Mensajería y videollamadas dentro del CRM con el negocio adjunto._
+  - ✅ Reuniones (2026-10-08): nueva al instante, unirse por enlace, programar con equipo e invitados por correo, negocio adjunto, calendario, acta y enlace de la grabación. Sala Jitsi (`MEETINGS_URL`) o enlace propio. Tests en `meetings.spec.ts` y `meeting-dates.test.ts`.
+  - ⏸ Chat interno del equipo. Videollamada embebida y grabación en el servidor (necesitan Jitsi propio o JaaS).
 - [ ] **E09-S07** (13p) Widget de chat web — _Chat embebible que crea conversaciones en la bandeja._
 
 ## Sprint 21 — Fase-3 · 42 pts

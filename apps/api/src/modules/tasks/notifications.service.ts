@@ -4,10 +4,11 @@ import { and, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type pg from 'pg';
 import { z } from 'zod';
 import type { Database, Transaction } from '../../shared/database/database.js';
-import { notificationPreferences, notifications } from '../../shared/database/schema.js';
+import { memberPresence, notificationPreferences, notifications } from '../../shared/database/schema.js';
 import { AppError } from '../../shared/http/app-error.js';
 import { ZodBody } from '../../shared/http/zod-validation.pipe.js';
-import { effectivePreference, NOTIFICATION_TYPE_IDS, NOTIFICATION_TYPES, type Preference } from './domain/notification-types.js';
+import { mutesEmail } from '../team/domain/presence.js';
+import { effectivePreference, isEmailLocked, NOTIFICATION_TYPE_IDS, NOTIFICATION_TYPES, type Preference } from './domain/notification-types.js';
 import { withTenant } from '../../shared/database/with-tenant.js';
 import type { Env } from '../../config/env.js';
 import type { Mailer } from '../../shared/mail/mailer.js';
@@ -54,15 +55,24 @@ export class NotificationsService {
 
   async deliver(tenantId: string, created: (typeof notifications.$inferSelect)[], email: boolean) {
     if (!created.length) return;
-    const { rows } = await this.conn.pool.query<{ id: string; email: string; name: string }>(`SELECT id, email, name FROM "user" WHERE id = ANY($1)`, [created.map((n) => n.userId)]);
-    const prefs = email
-      ? await withTenant(this.db, tenantId, (tx) => tx.select().from(notificationPreferences).where(inArray(notificationPreferences.userId, created.map((n) => n.userId))))
-      : [];
+    const userIds = created.map((n) => n.userId);
+    const { rows } = await this.conn.pool.query<{ id: string; email: string; name: string }>(`SELECT id, email, name FROM "user" WHERE id = ANY($1)`, [userIds]);
+    let prefs: (typeof notificationPreferences.$inferSelect)[] = [];
+    let presence: (typeof memberPresence.$inferSelect)[] = [];
+    if (email) {
+      [prefs, presence] = await withTenant(this.db, tenantId, async (tx) => [
+        await tx.select().from(notificationPreferences).where(inArray(notificationPreferences.userId, userIds)),
+        await tx.select().from(memberPresence).where(inArray(memberPresence.userId, userIds)),
+      ] as const);
+    }
+    const now = new Date();
     for (const n of created) {
       if (n.inApp) this.realtime.publish(tenantId, 'notification.created', { userId: n.userId, notificationId: n.id }, n.userId);
       const user = rows.find((r) => r.id === n.userId);
       const stored = prefs.find((p) => p.userId === n.userId && p.type === n.type);
       if (!email || !user || !effectivePreference(n.type, stored).email) continue;
+      // E01-S09 — Con no molestar o desconectado elegido, el aviso espera en la campana (los de cobro salen igual).
+      if (!isEmailLocked(n.type) && mutesEmail(presence.find((p) => p.userId === n.userId), now)) continue;
       const url = n.link ? `${this.env.APP_URL}${n.link}` : this.env.APP_URL;
       await this.mailer.send({
         to: user.email,

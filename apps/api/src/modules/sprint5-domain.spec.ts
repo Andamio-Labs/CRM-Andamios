@@ -42,6 +42,12 @@ describe('Reparto round-robin (E07-S01)', () => {
   });
   it('si el último ya no está en el equipo, empieza de nuevo', () => expect(nextAssignee(['a', 'b'], 'z')).toBe('a'));
   it('sin candidatos no asigna', () => expect(nextAssignee([], null)).toBeNull());
+  it('salta a quien no está disponible sin perder el orden (E01-S09)', () => {
+    const away = (id: string) => id !== 'b';
+    expect(nextAssignee(['a', 'b', 'c'], 'a', away)).toBe('c');
+    expect(nextAssignee(['a', 'b', 'c'], 'c', away)).toBe('a');
+    expect(nextAssignee(['a', 'b'], null, () => false)).toBeNull();
+  });
 });
 
 describe('Enlace Click-to-WhatsApp (E09-S01)', () => {

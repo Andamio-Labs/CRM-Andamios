@@ -56,6 +56,9 @@ export function loadEnv(source: Record<string, string | undefined> = process.env
       STORAGE_DIR: devDefault('./storage'),
       STORAGE_SIGNING_KEY: devDefault('dev-only-storage-signing-key-change-me').pipe(z.string().min(32)),
       TRIAL_DAYS: z.coerce.number().int().min(1).max(60).default(14),
+      // E12-S03 Salas de video: cada reunión sin enlace propio abre una sala Jitsi con nombre aleatorio.
+      // meet.jit.si pide que quien organiza entre con Google o GitHub; con un Jitsi propio o JaaS se cambia acá.
+      MEETINGS_URL: z.url().default('https://meet.jit.si'),
       // E05 IA. "openai" = cualquier API compatible con OpenAI: Groq (https://api.groq.com/openai/v1),
       // DeepSeek (https://api.deepseek.com) u Ollama local. "local" simula el modelo en desarrollo.
       LLM_API: z.enum(['none', 'openai', 'local']).default('none'),

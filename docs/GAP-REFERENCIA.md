@@ -65,7 +65,7 @@ Leyenda: ✅ ya está · 🔧 se corrige en este ciclo · ➕ se agrega en este 
 |---|---|---|
 | Búsqueda global Ctrl+K | 🔧 | La API existe (E02-S07); falta la paleta en la UI |
 | Notificaciones (campana) | ➕ | Base con E06-S02; preferencias en Sprint 8 (E14-S04) |
-| Presencia del usuario (punto verde) | 📅 | E01-S09 (Fase 3) |
+| Presencia del usuario (punto verde) | ➕ | E01-S09 adelantada: menú del avatar con en línea, en visita, no molestar y desconectado (1 hora, fin del día o hasta cambiarlo). La asignación automática omite a quien no está disponible |
 | Multiempresa / selector de workspace | 📅 | E01-S10 (Fase 3) |
 | Asistente de configuración con IA | 📅 | Épica E05 |
 
@@ -73,7 +73,7 @@ Leyenda: ✅ ya está · 🔧 se corrige en este ciclo · ➕ se agrega en este 
 
 | Funcionalidad | Estado | Story |
 |---|---|---|
-| Reuniones online con grabación | ⏭ | E12-S03 |
+| Reuniones online con grabación | ➕ | E12-S03 (parte de reuniones) adelantada: nueva, unirse, programar con equipo e invitados, calendario, acta y enlace de la grabación. Sala Jitsi por defecto; grabar en el servidor queda fuera |
 | Llamadas con PBX, log y análisis | ⏭ | E12-S01, E12-S02 |
 | Agente de IA que llama | ⏭ | Sin story (E05 a futuro) |
 | Chat interno del equipo con notas privadas | ⏭ | E12-S03 |

@@ -7,6 +7,7 @@ import { JOB_QUEUE } from '../../shared/tokens.js';
 import { IdentityModule } from '../identity/identity.module.js';
 import { type AuthContext, CurrentAuth, PermissionGuard, RequirePermission, SessionGuard } from '../identity/infrastructure/http/session.guard.js';
 import { TasksModule } from '../tasks/tasks.module.js';
+import { TeamModule } from '../team/team.module.js';
 import { WhatsAppModule } from '../whatsapp/whatsapp.module.js';
 import { AutomationService, ruleSchema, updateRuleSchema } from './automation.service.js';
 
@@ -29,7 +30,7 @@ class AutomationController {
 
 /** E07-S01 — Reglas predefinidas. */
 @Module({
-  imports: [IdentityModule, TasksModule, WhatsAppModule],
+  imports: [IdentityModule, TasksModule, TeamModule, WhatsAppModule],
   controllers: [AutomationController],
   providers: [AutomationService],
 })

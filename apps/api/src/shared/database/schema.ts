@@ -529,5 +529,38 @@ export const tenantUsage = pgTable('tenant_usage', {
   storageBytes: bigint('storage_bytes', { mode: 'number' }).notNull().default(0),
 });
 
+export type PresenceStatus = 'online' | 'visit' | 'dnd' | 'offline';
+
+/** E01-S09 — Estado que elige cada persona (sin fila = en línea). */
+export const memberPresence = pgTable(
+  'member_presence',
+  {
+    tenantId: text('tenant_id').notNull(),
+    userId: text('user_id').notNull(),
+    status: text('status').$type<PresenceStatus>().notNull(),
+    until: ts('until'),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.tenantId, t.userId] })],
+);
+
+/** E12-S03 — Reuniones online. */
+export const meetings = pgTable('meetings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: text('tenant_id').notNull(),
+  title: text('title').notNull(),
+  agenda: text('agenda'),
+  startsAt: ts('starts_at').notNull(),
+  endsAt: ts('ends_at').notNull(),
+  joinUrl: text('join_url').notNull(),
+  organizerId: text('organizer_id'),
+  participantIds: text('participant_ids').array().notNull().default([]),
+  guestEmails: text('guest_emails').array().notNull().default([]),
+  dealId: uuid('deal_id'),
+  minutes: text('minutes'),
+  recordingUrl: text('recording_url'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});
+
 /** Tabla de Better Auth: solo lectura de id y nombre para mostrar responsables. La gestiona identity. */
 export const user = pgTable('user', { id: text('id').primaryKey(), name: text('name').notNull(), email: text('email').notNull() });

@@ -27,6 +27,7 @@ aparece en el acento, el CTA primario y el asistente. Todo lo demás es neutro.
 | Prioridad alta | naranja suave | badge `High` |
 | Prioridad media | amarillo suave | badge `Medium` |
 | Éxito | verde suave | badges `New`, `100% active` |
+| Estado del empleado | punto `success` / `info` / `danger` / `muted` | en línea, en visita, no molestar, desconectado (avatar del topbar y equipo) |
 | Colores de etapa | `#94a3b8, #60a5fa, #f5b700, #a78bfa, #34d399, #f87171` | punto de color por columna (ya en `STAGE_COLORS`) |
 
 Máximo 2–3 colores + 1 acento por pantalla. Los neutros no cuentan.
