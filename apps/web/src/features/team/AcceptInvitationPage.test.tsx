@@ -25,7 +25,48 @@ describe('AcceptInvitation (E01-S03)', () => {
 
     expect(fetchMock).toHaveBeenLastCalledWith('/api/v1/invitations/inv123/accept', expect.objectContaining({ method: 'POST' }));
     expect(JSON.parse(fetchMock.mock.calls[1]![1].body)).toEqual({ name: 'Ana Gómez', password: 'Colombia2026!', acceptLegal: true });
-    expect(onJoined).toHaveBeenCalled();
+    // Con la clave recién creada entra directo, sin volver a escribirla.
+    expect(onJoined).toHaveBeenCalledWith({ email: 'ana@clinica.co', password: 'Colombia2026!' });
+  });
+
+  it('valida la contraseña antes de enviar', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(json(pending));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<AcceptInvitation invitationId="inv123" onJoined={vi.fn()} onLoginRequired={vi.fn()} />);
+
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText('Tu nombre'), 'Ana');
+    await user.type(screen.getByLabelText('Crea una contraseña'), 'corta');
+    await user.click(screen.getByRole('checkbox', { name: /acepto los términos/i }));
+    await user.click(screen.getByRole('button', { name: 'Unirme al equipo' }));
+
+    expect(screen.getByText(/al menos 10 caracteres/i)).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('con la sesión de otra persona abierta, avisa con qué cuenta va a entrar', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json(pending)));
+    render(<AcceptInvitation invitationId="inv123" signedInAs="duena@clinica.co" onJoined={vi.fn()} onLoginRequired={vi.fn()} />);
+    expect(await screen.findByText(/duena@clinica.co/)).toBeInTheDocument();
+    expect(screen.getByText(/entrarás con tu cuenta nueva/i)).toBeInTheDocument();
+  });
+
+  it('si la API rechaza, muestra su motivo en vez de un error genérico', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(json(pending))
+      .mockResolvedValueOnce(json({ code: 'LOGIN_REQUIRED', message: 'Ya tienes una cuenta: inicia sesión para aceptar.' }, 409));
+    vi.stubGlobal('fetch', fetchMock);
+    const onJoined = vi.fn();
+    render(<AcceptInvitation invitationId="inv123" onJoined={onJoined} onLoginRequired={vi.fn()} />);
+
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText('Tu nombre'), 'Ana Gómez');
+    await user.type(screen.getByLabelText('Crea una contraseña'), 'Colombia2026!');
+    await user.click(screen.getByRole('checkbox', { name: /acepto los términos/i }));
+    await user.click(screen.getByRole('button', { name: 'Unirme al equipo' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Ya tienes una cuenta: inicia sesión para aceptar.');
+    expect(onJoined).not.toHaveBeenCalled();
   });
 
   it('si ya tiene cuenta, le pide iniciar sesión', async () => {

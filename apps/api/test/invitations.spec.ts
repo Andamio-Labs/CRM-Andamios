@@ -114,6 +114,23 @@ describe('Invitaciones (E01-S03)', () => {
     await intruder.agent.post(`/api/v1/invitations/${invitationIdFor(email)}/accept`).set('Origin', APP_URL).send({}).expect(403);
   });
 
+  it('con la sesión de quien invitó abierta en el navegador, la persona nueva igual crea su cuenta y se une', async () => {
+    const owner = await registerAndLogin(t, 'Andamios');
+    const email = uniqueEmail('vendedor');
+    await invite(owner.agent, email).expect(201);
+    const id = invitationIdFor(email);
+
+    await owner.agent.post(`/api/v1/invitations/${id}/accept`).set('Origin', APP_URL)
+      .send({ acceptLegal: true, name: 'Vendedor Nuevo', password: STRONG_PASSWORD }).expect(201);
+    const { rows } = await t.owner.query<{ email: string }>(
+      `SELECT u.email FROM member m JOIN "user" u ON u.id = m."userId"
+       JOIN invitation i ON i."organizationId" = m."organizationId" WHERE i.id = $1 ORDER BY m."createdAt"`,
+      [id],
+    );
+    expect(rows.map((r) => r.email)).toEqual([owner.email, email]);
+    await t.http().post('/api/auth/sign-in/email').set('Origin', APP_URL).send({ email, password: STRONG_PASSWORD }).expect(200);
+  });
+
   it.each(['invite-member', 'update-member-role', 'remove-member', 'accept-invitation', 'create'])(
     'la ruta de Better Auth /organization/%s está cerrada (solo se usa /api/v1)',
     async (route) => {
