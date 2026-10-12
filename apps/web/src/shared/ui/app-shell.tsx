@@ -1,10 +1,14 @@
+import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
+import { api } from '../api';
 import { authClient } from '../auth-client';
+import { initials } from '../initials';
 import { useRegion } from '../i18n/use-region';
 import type { MessageKey } from '../i18n/messages';
 import { useTheme } from '../use-theme';
-import { AccountBanner, CommandPalette, NotificationsBell } from './shell-widgets';
+import { NotificationsBell } from './notifications-bell';
+import { AccountBanner, CommandPalette } from './shell-widgets';
 
 type NavTo = '/' | '/tasks' | '/reports' | '/deals' | '/inbox' | '/contacts' | '/team' | '/settings';
 
@@ -42,8 +46,11 @@ function Logo() {
   );
 }
 
-/** Marco de las pantallas autenticadas: sidebar en desktop, barra superior en móvil. */
-export function AppShell({ title, subtitle, wide, children }: { title: string; subtitle?: string; wide?: boolean; children: ReactNode }) {
+/**
+ * Marco de las pantallas autenticadas: sidebar y rail derecho (perfil, campana, equipo) en desktop,
+ * barra superior en móvil. `hideHeading`: la página trae su propio encabezado (el título queda en la miga).
+ */
+export function AppShell({ title, subtitle, wide, hideHeading, children }: { title: string; subtitle?: string; wide?: boolean; hideHeading?: boolean; children: ReactNode }) {
   const width = wide ? 'max-w-none' : 'max-w-3xl';
   const navigate = useNavigate();
   const { t } = useRegion();
@@ -56,11 +63,7 @@ export function AppShell({ title, subtitle, wide, children }: { title: string; s
     <div className="min-h-dvh bg-canvas md:flex">
       <aside className="sticky top-0 hidden h-dvh w-[12rem] shrink-0 flex-col border-r border-line bg-surface md:flex">
         <div className="flex h-12 items-center justify-between border-b border-line px-3"><Logo /><span className="text-xs text-muted">⌄</span></div>
-        <div className="flex items-center gap-2 border-b border-line px-3 py-2 text-xs text-muted">
-          <span className="grid size-6 place-items-center rounded-full bg-honey-soft font-semibold text-ink">A</span>
-          <span className="truncate font-medium text-ink">Andamion</span>
-          <span className="ml-auto">⌄</span>
-        </div>
+        <div className="border-b border-line px-2 py-2"><CompanySwitcher /></div>
         <div className="flex gap-1 border-b border-line p-2">
           <CommandPalette label="Buscar secciones..." />
           <span aria-hidden className="grid min-h-9 min-w-9 place-items-center rounded-md border border-line text-xs text-muted">▦</span>
@@ -89,7 +92,7 @@ export function AppShell({ title, subtitle, wide, children }: { title: string; s
             <span className="hidden font-medium text-ink md:inline">{title}</span>
             <div className="ml-auto flex items-center gap-1">
               <CommandPalette />
-              <NotificationsBell />
+              <div className="md:hidden"><NotificationsBell /></div>
               <button
                 type="button"
                 onClick={toggleTheme}
@@ -120,16 +123,50 @@ export function AppShell({ title, subtitle, wide, children }: { title: string; s
         </header>
         <main className={`mx-auto ${width} px-3 py-4 sm:px-5 sm:py-5`}>
           <AccountBanner />
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <h1 className="text-xl font-semibold tracking-tight text-ink">{title}</h1>
-              {subtitle && <p className="mt-0.5 text-xs text-muted">{subtitle}</p>}
+          {hideHeading ? <h1 className="sr-only">{title}</h1> : (
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h1 className="text-xl font-semibold tracking-tight text-ink">{title}</h1>
+                {subtitle && <p className="mt-0.5 text-xs text-muted">{subtitle}</p>}
+              </div>
             </div>
-          </div>
+          )}
           <div>{children}</div>
         </main>
       </div>
+      <RightRail />
     </div>
+  );
+}
+
+/** Empresa activa; lleva a "Configuración de empresas" para cambiar, crear o unirse a otra. */
+function CompanySwitcher() {
+  const companies = useQuery({ queryKey: ['my-companies'], queryFn: () => api<{ id: string; name: string; active: boolean }[]>('/api/v1/my-companies'), staleTime: 60_000 });
+  const active = companies.data?.find((c) => c.active);
+  return (
+    <Link to="/profile" search={{ tab: 'empresa' }} title="Cambiar de empresa" className="flex min-h-10 items-center gap-2 rounded-full border border-line bg-canvas px-1.5 text-xs transition hover:border-honey/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-honey">
+      <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-full bg-honey-soft text-[10px] font-bold text-ink ring-1 ring-honey/50">{active ? initials(active.name) : '…'}</span>
+      <span className="min-w-0 flex-1 truncate font-semibold text-ink">{active?.name ?? 'Tu empresa'}</span>
+      <svg aria-hidden viewBox="0 0 24 24" className="mr-1 size-3.5 shrink-0 text-muted" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7" /></svg>
+    </Link>
+  );
+}
+
+/** Rail derecho de desktop: tu avatar (abre el perfil), la campana y el equipo. */
+function RightRail() {
+  const session = authClient.useSession();
+  const name = session.data?.user.name ?? '';
+  return (
+    <aside aria-label="Tu cuenta" className="sticky top-0 hidden h-dvh w-14 shrink-0 flex-col items-center gap-3 border-l border-line bg-surface py-2.5 md:flex">
+      <Link to="/profile" aria-label={`Tu perfil${name ? `: ${name}` : ''}`} title="Tu perfil" className="relative rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-honey focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
+        <span aria-hidden className="grid size-9 place-items-center rounded-full bg-honey text-xs font-bold text-on-honey">{initials(name)}</span>
+        <span aria-hidden className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full bg-success ring-2 ring-surface" />
+      </Link>
+      <NotificationsBell placement="rail" />
+      <Link to="/team" aria-label="Equipo" title="Equipo" className="grid min-h-10 min-w-10 place-items-center rounded-lg text-ink transition hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-honey" activeProps={{ className: 'bg-honey-soft' }}>
+        <svg aria-hidden viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8" r="4" /><path d="M2 21a7 7 0 0 1 14 0" /><path d="M16 4a4 4 0 0 1 0 8" /><path d="M22 21a7 7 0 0 0-4-6.3" /></svg>
+      </Link>
+    </aside>
   );
 }
 

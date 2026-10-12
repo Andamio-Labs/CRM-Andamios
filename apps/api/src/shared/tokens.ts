@@ -12,3 +12,4 @@ export const LLM_PROVIDER = Symbol('LLM_PROVIDER');
 export const WOMPI_API = Symbol('WOMPI_API');
 export const EMBEDDINGS_PROVIDER = Symbol('EMBEDDINGS_PROVIDER');
 export const PAGE_FETCHER = Symbol('PAGE_FETCHER');
+export const PUSH_SENDER = Symbol('PUSH_SENDER');

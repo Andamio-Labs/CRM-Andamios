@@ -2,28 +2,29 @@ import { randomBytes } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { loadEnv } from './env.js';
 
+const production = {
+  NODE_ENV: 'production',
+  DATABASE_URL: 'postgres://app:app@db:5432/beecrm',
+  REDIS_URL: 'redis://cache:6379',
+  SMTP_HOST: 'smtp.example.com',
+  BETTER_AUTH_SECRET: 'x'.repeat(40),
+  ENCRYPTION_KEYS: `k1:${randomBytes(32).toString('base64')}`,
+  ENCRYPTION_ACTIVE_KEY: 'k1',
+  METRICS_TOKEN: 'm'.repeat(24),
+  META_APP_ID: '123',
+  META_APP_SECRET: 'meta-secret',
+  META_VERIFY_TOKEN: 'verify',
+  WOMPI_URL: 'https://production.wompi.co/v1',
+  WOMPI_PUBLIC_KEY: 'pub_prod_x',
+  WOMPI_PRIVATE_KEY: 'prv_prod_x',
+  WOMPI_EVENTS_SECRET: 'prod_events_x',
+  WOMPI_INTEGRITY_SECRET: 'prod_integrity_x',
+  STORAGE_DIR: '/data',
+  STORAGE_SIGNING_KEY: 's'.repeat(40),
+};
+
 /** E13-S07 — Producción no arranca con simuladores ni con el sandbox de pagos por descuido. */
 describe('loadEnv en producción', () => {
-  const production = {
-    NODE_ENV: 'production',
-    DATABASE_URL: 'postgres://app:app@db:5432/beecrm',
-    REDIS_URL: 'redis://cache:6379',
-    SMTP_HOST: 'smtp.example.com',
-    BETTER_AUTH_SECRET: 'x'.repeat(40),
-    ENCRYPTION_KEYS: `k1:${randomBytes(32).toString('base64')}`,
-    ENCRYPTION_ACTIVE_KEY: 'k1',
-    METRICS_TOKEN: 'm'.repeat(24),
-    META_APP_ID: '123',
-    META_APP_SECRET: 'meta-secret',
-    META_VERIFY_TOKEN: 'verify',
-    WOMPI_URL: 'https://production.wompi.co/v1',
-    WOMPI_PUBLIC_KEY: 'pub_prod_x',
-    WOMPI_PRIVATE_KEY: 'prv_prod_x',
-    WOMPI_EVENTS_SECRET: 'prod_events_x',
-    WOMPI_INTEGRITY_SECRET: 'prod_integrity_x',
-    STORAGE_DIR: '/data',
-    STORAGE_SIGNING_KEY: 's'.repeat(40),
-  };
 
   it('arranca con la configuración completa', () => {
     expect(loadEnv(production)).toMatchObject({ WOMPI_API: 'http', WHATSAPP_API: 'graph' });
@@ -71,5 +72,32 @@ describe('loadEnv en producción', () => {
       EMBEDDINGS_API_KEY: '',
       EMBEDDINGS_MODEL: '',
     })).toMatchObject({ LLM_API: 'local', EMBEDDINGS_API: 'local' });
+  });
+});
+
+/** Web Push: sin llaves en producción el canal se apaga; en desarrollo hay llaves de prueba. */
+describe('loadEnv y VAPID', () => {
+  it('en desarrollo, una variable vacía (docker compose sin .env) usa las llaves de prueba', () => {
+    const env = loadEnv({ VAPID_PUBLIC_KEY: '', VAPID_PRIVATE_KEY: '' });
+    expect(env.VAPID_PUBLIC_KEY).toMatch(/^B/);
+    expect(env.VAPID_PRIVATE_KEY).toBeTruthy();
+  });
+
+  it('las dos llaves van juntas', () => {
+    expect(() => loadEnv({ ...production, VAPID_PUBLIC_KEY: 'BAAA' })).toThrow(/VAPID_PUBLIC_KEY y VAPID_PRIVATE_KEY van juntas/);
+    expect(loadEnv(production).VAPID_PUBLIC_KEY).toBeUndefined();
+  });
+});
+
+describe('loadEnv y SMTP del proveedor transaccional', () => {
+  it('usuario y contraseña van juntos', () => {
+    expect(() => loadEnv({ SMTP_USER: 'AKIA' })).toThrow(/SMTP_USER y SMTP_PASS van juntas/);
+    expect(loadEnv({ SMTP_USER: 'AKIA', SMTP_PASS: 'secreto', SMTP_SECURE: 'true' })).toMatchObject({ SMTP_USER: 'AKIA', SMTP_SECURE: true });
+  });
+
+  it('sin variables queda Mailpit sin autenticación', () => {
+    const env = loadEnv({});
+    expect(env.SMTP_SECURE).toBe(false);
+    expect(env.SMTP_USER ?? env.SMTP_PASS).toBeUndefined();
   });
 });

@@ -3,7 +3,9 @@ import type { z } from 'zod';
 import { ZodBody, ZodQuery } from '../../shared/http/zod-validation.pipe.js';
 import type { JobHandler, JobQueue } from '../../shared/queue/bull-queue.js';
 import { JOB_HANDLERS } from '../../shared/queue/queue.module.js';
-import { JOB_QUEUE } from '../../shared/tokens.js';
+import type { Env } from '../../config/env.js';
+import { InMemoryPushSender, WebPushSender } from '../../shared/push/push-sender.js';
+import { ENV, JOB_QUEUE, PUSH_SENDER } from '../../shared/tokens.js';
 import { IdentityModule } from '../identity/identity.module.js';
 import { type AuthContext, CurrentAuth, PermissionGuard, RequirePermission, SessionGuard } from '../identity/infrastructure/http/session.guard.js';
 import { TenancyModule } from '../tenancy/tenancy.module.js';
@@ -35,7 +37,18 @@ class TasksController {
 @Module({
   imports: [IdentityModule, TenancyModule],
   controllers: [TasksController, NotificationsController],
-  providers: [TasksService, NotificationsService],
+  providers: [
+    TasksService,
+    NotificationsService,
+    {
+      // Sin llaves VAPID no hay a quién mandarle: la suscripción se rechaza antes de llegar acá.
+      provide: PUSH_SENDER,
+      inject: [ENV],
+      useFactory: (env: Env) => env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY
+        ? new WebPushSender({ subject: env.VAPID_SUBJECT, publicKey: env.VAPID_PUBLIC_KEY, privateKey: env.VAPID_PRIVATE_KEY })
+        : new InMemoryPushSender(),
+    },
+  ],
   exports: [TasksService, NotificationsService],
 })
 export class TasksModule implements OnModuleInit {

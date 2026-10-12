@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto';
 import type pg from 'pg';
 import { z } from 'zod';
 import type { Env } from '../../../config/env.js';
-import type { Database } from '../../../shared/database/database.js';
+import type { Database, Transaction } from '../../../shared/database/database.js';
 import { subscriptions, tenantSettings } from '../../../shared/database/schema.js';
 import { withTenant } from '../../../shared/database/with-tenant.js';
 import { AUTH, DB, ENV, PG_POOL } from '../../../shared/tokens.js';
@@ -70,12 +70,7 @@ export class RegisterCompany {
       if (!org) throw new Error('No se pudo crear la organización');
       orgId = org.id;
 
-      const trialEndsAt = new Date(Date.now() + this.env.TRIAL_DAYS * 86_400_000);
-      await withTenant(this.db, org.id, async (tx) => {
-        await tx.insert(tenantSettings).values({ tenantId: org.id, businessHours: DEFAULT_BUSINESS_HOURS, outOfHoursMessage: DEFAULT_OUT_OF_HOURS_MESSAGE });
-        await tx.insert(subscriptions).values({ tenantId: org.id, plan: 'trial', status: 'trialing', trialEndsAt });
-        await seedPipelineDefaults(tx, org.id);
-      });
+      await withTenant(this.db, org.id, (tx) => provisionTenant(tx, org.id, this.env.TRIAL_DAYS));
       await this.legal.recordAcceptance(user.id, context);
     } catch (error) {
       // Auditoría #9: compensación completa, sin tenants huérfanos.
@@ -86,7 +81,15 @@ export class RegisterCompany {
   }
 }
 
-function slugify(name: string): string {
+/** Lo que toda empresa nueva necesita: configuración, plan de prueba y embudo por defecto. */
+export async function provisionTenant(tx: Transaction, tenantId: string, trialDays: number) {
+  const trialEndsAt = new Date(Date.now() + trialDays * 86_400_000);
+  await tx.insert(tenantSettings).values({ tenantId, businessHours: DEFAULT_BUSINESS_HOURS, outOfHoursMessage: DEFAULT_OUT_OF_HOURS_MESSAGE });
+  await tx.insert(subscriptions).values({ tenantId, plan: 'trial', status: 'trialing', trialEndsAt });
+  await seedPipelineDefaults(tx, tenantId);
+}
+
+export function slugify(name: string): string {
   const base = name
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')

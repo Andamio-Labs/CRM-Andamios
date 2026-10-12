@@ -13,6 +13,12 @@ interface Member {
   email: string;
   role: TeamRole;
 }
+interface JoinRequest {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+}
 interface Invitation {
   id: string;
   email: string;
@@ -33,9 +39,11 @@ export function TeamPage() {
   const session = authClient.useSession();
   const members = useQuery({ queryKey: ['members'], queryFn: () => api<Member[]>('/api/v1/members') });
   const invitations = useQuery({ queryKey: ['invitations'], queryFn: () => api<Invitation[]>('/api/v1/invitations') });
+  const joinRequests = useQuery({ queryKey: ['join-requests'], queryFn: () => api<JoinRequest[]>('/api/v1/join-requests'), retry: false });
   const refresh = () => Promise.all([
     queryClient.invalidateQueries({ queryKey: ['members'] }),
     queryClient.invalidateQueries({ queryKey: ['invitations'] }),
+    queryClient.invalidateQueries({ queryKey: ['join-requests'] }),
   ]);
 
   const myRole = members.data?.find((m) => m.userId === session.data?.user.id)?.role;
@@ -45,7 +53,11 @@ export function TeamPage() {
   });
   const remove = useMutation({ mutationFn: (id: string) => api(`/api/v1/members/${id}`, { method: 'DELETE' }), onSuccess: refresh });
   const cancel = useMutation({ mutationFn: (id: string) => api(`/api/v1/invitations/${id}`, { method: 'DELETE' }), onSuccess: refresh });
-  const actionError = changeRole.error ?? remove.error ?? cancel.error;
+  const decide = useMutation({
+    mutationFn: ({ id, action }: { id: string; action: 'approve' | 'reject' }) => api(`/api/v1/join-requests/${id}/${action}`, { method: 'POST' }),
+    onSuccess: refresh,
+  });
+  const actionError = changeRole.error ?? remove.error ?? cancel.error ?? decide.error;
 
   if (members.error instanceof ApiError && members.error.status === 403) {
     return (
@@ -60,6 +72,29 @@ export function TeamPage() {
       <InviteForm canInviteAdmins={myRole === 'owner'} onInvited={refresh} />
 
       {actionError && <div className="mt-4"><Alert>{errorMessage(actionError)}</Alert></div>}
+
+      {Boolean(joinRequests.data?.length) && (
+        <section className="mt-8">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-muted">Solicitudes para unirse</h2>
+          <p className="mt-1 text-xs text-muted">Pidieron entrar con el código de la empresa. Entran como vendedores.</p>
+          <ul className="mt-3 divide-y divide-line rounded-xl border border-honey/50 bg-surface">
+            {joinRequests.data?.map((r) => (
+              <li key={r.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-ink">{r.name}</p>
+                  <p className="truncate text-sm text-muted">{r.email}</p>
+                </div>
+                <button onClick={() => decide.mutate({ id: r.id, action: 'reject' })} disabled={decide.isPending} className="inline-flex min-h-11 items-center px-2 text-sm text-muted underline">
+                  Rechazar
+                </button>
+                <button onClick={() => decide.mutate({ id: r.id, action: 'approve' })} disabled={decide.isPending} className="inline-flex min-h-10 items-center rounded-lg bg-honey px-4 text-sm font-semibold text-on-honey">
+                  Aprobar
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="mt-8">
         <h2 className="text-sm font-medium uppercase tracking-wide text-muted">Miembros</h2>

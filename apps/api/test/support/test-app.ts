@@ -10,11 +10,12 @@ import { inject } from 'vitest';
 import { AppModule } from '../../src/app.module.js';
 import { configureApp } from '../../src/configure-app.js';
 import { loadEnv } from '../../src/config/env.js';
-import { ATTEMPT_STORE, ENV, MAILER, WHATSAPP_API, WOMPI_API } from '../../src/shared/tokens.js';
+import { ATTEMPT_STORE, ENV, MAILER, PUSH_SENDER, WHATSAPP_API, WOMPI_API } from '../../src/shared/tokens.js';
 import { LocalWompiApi } from '../../src/modules/billing/infrastructure/wompi-api.js';
 import { LocalWhatsAppApi } from '../../src/modules/whatsapp/infrastructure/whatsapp-api.js';
 import { InMemoryAttemptStore } from '../../src/modules/identity/infrastructure/in-memory-attempt-store.js';
 import { InMemoryMailer } from '../../src/shared/mail/in-memory-mailer.js';
+import { InMemoryPushSender } from '../../src/shared/push/push-sender.js';
 
 export const APP_URL = 'http://localhost:5173';
 export const META_APP_SECRET = 'test-meta-app-secret';
@@ -23,6 +24,7 @@ export const WOMPI_EVENTS_SECRET = 'test_events_test';
 export interface TestApp {
   app: INestApplication;
   mailer: InMemoryMailer;
+  push: InMemoryPushSender;
   whatsapp: LocalWhatsAppApi;
   wompi: LocalWompiApi;
   owner: pg.Client;
@@ -30,12 +32,13 @@ export interface TestApp {
   close: () => Promise<void>;
 }
 
-/** Levanta la API completa contra el Postgres de Testcontainers. Correo y contador de intentos en memoria. */
+/** Levanta la API completa contra el Postgres de Testcontainers. Correo, push y contador de intentos en memoria. */
 export async function createTestApp(
   overrides: Record<string, string> = {},
   customize: (builder: TestingModuleBuilder) => TestingModuleBuilder = (builder) => builder,
 ): Promise<TestApp> {
   const mailer = new InMemoryMailer();
+  const push = new InMemoryPushSender();
   const whatsapp = new LocalWhatsAppApi();
   const wompi = new LocalWompiApi();
   const env = loadEnv({
@@ -57,6 +60,7 @@ export async function createTestApp(
   const moduleRef = await customize(Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(ENV).useValue(env)
     .overrideProvider(MAILER).useValue(mailer)
+    .overrideProvider(PUSH_SENDER).useValue(push)
     .overrideProvider(ATTEMPT_STORE).useValue(new InMemoryAttemptStore())
     .overrideProvider(WHATSAPP_API).useValue(whatsapp)
     .overrideProvider(WOMPI_API).useValue(wompi))
@@ -72,6 +76,7 @@ export async function createTestApp(
   return {
     app,
     mailer,
+    push,
     whatsapp,
     wompi,
     owner,

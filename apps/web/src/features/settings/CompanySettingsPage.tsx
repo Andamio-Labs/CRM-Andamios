@@ -12,7 +12,6 @@ import { BillingSettings } from './BillingSettings';
 import { DangerZone } from './DangerZone';
 import { GrowthSettings } from './GrowthSettings';
 import { MessagingSettings } from './MessagingSettings';
-import { NotificationSettings } from './NotificationSettings';
 import { PrivacySettings } from './PrivacySettings';
 import { type SettingsTab, tabFrom, tabsFor } from './settings-tabs';
 import { WhatsAppSettings } from './WhatsAppSettings';
@@ -43,7 +42,7 @@ const LOCALES: [string, string][] = [
 ];
 
 const TAB_CONTENT: Record<SettingsTab, () => ReactNode> = {
-  general: () => <><CompanySection /><NotificationSettings /></>,
+  general: () => <CompanySection />,
   canales: () => <><WhatsAppSettings /><MessagingSettings /><GrowthSettings /></>,
   ia: () => <AiSettings />,
   plan: () => <BillingSettings />,

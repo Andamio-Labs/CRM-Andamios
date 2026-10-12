@@ -18,7 +18,7 @@ export const JOB_HANDLERS = Symbol('JOB_HANDLERS');
       provide: JOB_HANDLERS,
       inject: [ENV],
       useFactory: (env: Env): Record<string, JobHandler> => {
-        const smtp = new SmtpMailer({ host: env.SMTP_HOST, port: env.SMTP_PORT, from: env.MAIL_FROM });
+        const smtp = new SmtpMailer({ host: env.SMTP_HOST, port: env.SMTP_PORT, secure: env.SMTP_SECURE, user: env.SMTP_USER, pass: env.SMTP_PASS, from: env.MAIL_FROM });
         return { 'mail.send': (message) => smtp.send(message) };
       },
     },

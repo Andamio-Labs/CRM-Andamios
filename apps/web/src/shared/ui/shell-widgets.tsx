@@ -1,70 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { linkTarget } from '../link-target';
+import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
-import { useRegion } from '../i18n/use-region';
-import { useRealtime } from '../realtime';
 import { useDebouncedValue } from '../use-debounced-value';
-
-interface Notification { id: string; title: string; body: string | null; link: string | null; readAt: string | null; createdAt: string }
-
-/** E06-S02 / E14-S04 — Campana con contador, lista y marcar como leídas. Se actualiza en vivo. */
-export function NotificationsBell() {
-  const queryClient = useQueryClient();
-  const { date, time } = useRegion();
-  const [open, setOpen] = useState(false);
-  const notifications = useQuery({ queryKey: ['notifications'], queryFn: () => api<{ items: Notification[]; unread: number }>('/api/v1/notifications') });
-  const read = useMutation({
-    mutationFn: (id: string) => api(`/api/v1/notifications/${id}/read`, { method: 'POST' }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
-  });
-  const readAll = useMutation({
-    mutationFn: () => api('/api/v1/notifications/read-all', { method: 'POST' }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
-  });
-
-  useRealtime(['notification.created'], () => void queryClient.invalidateQueries({ queryKey: ['notifications'] }));
-
-  const unread = notifications.data?.unread ?? 0;
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        aria-label={unread ? `Notificaciones, ${unread} sin leer` : 'Notificaciones'}
-        className="relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-ink"
-      >
-        <svg aria-hidden viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
-        {unread > 0 && <span className="absolute right-1 top-1 rounded-full bg-danger px-1.5 text-[11px] font-semibold text-surface">{unread > 9 ? '9+' : unread}</span>}
-      </button>
-      {open && (
-        <div className="absolute right-0 z-20 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-line bg-surface shadow-lg">
-          <div className="flex items-center justify-between border-b border-line px-4 py-2">
-            <p className="font-medium text-ink">Notificaciones</p>
-            {unread > 0 && <button onClick={() => readAll.mutate()} className="min-h-11 text-sm text-muted underline">Marcar todas</button>}
-          </div>
-          <ul className="max-h-96 divide-y divide-line overflow-y-auto">
-            {notifications.data?.items.length === 0 && <li className="px-4 py-6 text-center text-sm text-muted">No tienes notificaciones.</li>}
-            {notifications.data?.items.map((n) => (
-              <li key={n.id} className={n.readAt ? '' : 'bg-honey/10'}>
-                <Link
-                  {...(linkTarget(n.link) as { to: '/' })}
-                  onClick={() => { if (!n.readAt) read.mutate(n.id); setOpen(false); }}
-                  className="block px-4 py-3"
-                >
-                  <p className="text-sm font-medium text-ink">{n.title}</p>
-                  {n.body && <p className="text-sm text-muted">{n.body}</p>}
-                  <p className="mt-1 text-xs text-muted">{date(n.createdAt)} {time(n.createdAt)}</p>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
-}
 
 interface SearchResult {
   contacts: { id: string; name: string; phone: string | null }[];
