@@ -53,6 +53,11 @@ Con `WHATSAPP_API=local` (default fuera de producción) la API simula Meta:
 Para Meta real: `WHATSAPP_API=graph`, `META_APP_ID`, `META_APP_SECRET`, `META_VERIFY_TOKEN` en la API y
 `VITE_META_APP_ID` + `VITE_META_CONFIG_ID` en la web. Verificá `META_GRAPH_VERSION` contra la versión vigente.
 
+### Reuniones (E12-S03)
+
+Cada reunión sin enlace propio abre una sala de Jitsi con nombre aleatorio en `MEETINGS_URL` (por defecto `https://meet.jit.si`,
+que pide a quien organiza entrar con Google o GitHub). Con un Jitsi propio o JaaS, cambia esa variable.
+
 ### Alternativa: infraestructura en Docker, apps en el host
 
 ```bash

@@ -3,7 +3,7 @@ import { type FormEvent, useState } from 'react';
 import { Alert, AuthLayout, Button, Field } from '../../shared/ui/form';
 import { LEGAL_REQUIRED, LegalConsent } from '../legal/legal';
 
-const PASSWORD_MIN_LENGTH = 10;
+export const PASSWORD_MIN_LENGTH = 10;
 
 export function RegisterPage() {
   return (

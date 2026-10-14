@@ -8,9 +8,10 @@ import { useRegion } from '../i18n/use-region';
 import type { MessageKey } from '../i18n/messages';
 import { useTheme } from '../use-theme';
 import { NotificationsBell } from './notifications-bell';
+import { ProfileMenu } from './profile-menu';
 import { AccountBanner, CommandPalette } from './shell-widgets';
 
-type NavTo = '/' | '/tasks' | '/reports' | '/deals' | '/inbox' | '/contacts' | '/team' | '/settings';
+type NavTo = '/' | '/tasks' | '/meetings' | '/reports' | '/deals' | '/inbox' | '/contacts' | '/team' | '/settings';
 
 const MAIN_NAV: { to: NavTo; label: MessageKey }[] = [
   { to: '/', label: 'nav.home' },
@@ -18,6 +19,7 @@ const MAIN_NAV: { to: NavTo; label: MessageKey }[] = [
   { to: '/inbox', label: 'nav.inbox' },
   { to: '/contacts', label: 'nav.contacts' },
   { to: '/tasks', label: 'nav.tasks' },
+  { to: '/meetings', label: 'nav.meetings' },
   { to: '/reports', label: 'nav.reports' },
 ];
 
@@ -32,6 +34,7 @@ const NAV_ICONS: Record<NavTo, string> = {
   '/inbox': '▤',
   '/contacts': '♙',
   '/tasks': '☑',
+  '/meetings': '◉',
   '/reports': '▥',
   '/team': '♧',
   '/settings': '⚙',
@@ -102,9 +105,8 @@ export function AppShell({ title, subtitle, wide, hideHeading, children }: { tit
               >
                 <span aria-hidden>{theme === 'dark' ? '☀' : '☾'}</span>
               </button>
-              <button onClick={signOut} className="inline-flex min-h-11 items-center px-2 text-sm text-muted underline md:hidden">
-                {t('nav.signOut')}
-              </button>
+              {/* En desktop el avatar con tu estado vive en el rail derecho. */}
+              <div className="md:hidden"><ProfileMenu onSignOut={signOut} /></div>
             </div>
           </div>
           <nav aria-label="Principal" className="flex min-w-0 max-w-full gap-1 overflow-x-auto overscroll-x-contain px-3 pb-2 md:hidden">
@@ -134,7 +136,7 @@ export function AppShell({ title, subtitle, wide, hideHeading, children }: { tit
           <div>{children}</div>
         </main>
       </div>
-      <RightRail />
+      <RightRail onSignOut={signOut} />
     </div>
   );
 }
@@ -152,16 +154,11 @@ function CompanySwitcher() {
   );
 }
 
-/** Rail derecho de desktop: tu avatar (abre el perfil), la campana y el equipo. */
-function RightRail() {
-  const session = authClient.useSession();
-  const name = session.data?.user.name ?? '';
+/** Rail derecho de desktop: tu avatar con tu estado (E01-S09; desde ahí, tu perfil), la campana y el equipo. */
+function RightRail({ onSignOut }: { onSignOut: () => void }) {
   return (
     <aside aria-label="Tu cuenta" className="sticky top-0 hidden h-dvh w-14 shrink-0 flex-col items-center gap-3 border-l border-line bg-surface py-2.5 md:flex">
-      <Link to="/profile" aria-label={`Tu perfil${name ? `: ${name}` : ''}`} title="Tu perfil" className="relative rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-honey focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
-        <span aria-hidden className="grid size-9 place-items-center rounded-full bg-honey text-xs font-bold text-on-honey">{initials(name)}</span>
-        <span aria-hidden className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full bg-success ring-2 ring-surface" />
-      </Link>
+      <ProfileMenu onSignOut={onSignOut} placement="rail" />
       <NotificationsBell placement="rail" />
       <Link to="/team" aria-label="Equipo" title="Equipo" className="grid min-h-10 min-w-10 place-items-center rounded-lg text-ink transition hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-honey" activeProps={{ className: 'bg-honey-soft' }}>
         <svg aria-hidden viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8" r="4" /><path d="M2 21a7 7 0 0 1 14 0" /><path d="M16 4a4 4 0 0 1 0 8" /><path d="M22 21a7 7 0 0 0-4-6.3" /></svg>

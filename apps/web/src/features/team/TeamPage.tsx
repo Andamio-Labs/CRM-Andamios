@@ -4,6 +4,7 @@ import { api, ApiError } from '../../shared/api';
 import { authClient } from '../../shared/auth-client';
 import { AppShell } from '../../shared/ui/app-shell';
 import { Alert, Button, Field } from '../../shared/ui/form';
+import { PRESENCE, PresenceDot, useTeamPresence } from './presence';
 import { ROLE_LABELS, type TeamRole } from './roles';
 
 interface Member {
@@ -40,6 +41,8 @@ export function TeamPage() {
   const members = useQuery({ queryKey: ['members'], queryFn: () => api<Member[]>('/api/v1/members') });
   const invitations = useQuery({ queryKey: ['invitations'], queryFn: () => api<Invitation[]>('/api/v1/invitations') });
   const joinRequests = useQuery({ queryKey: ['join-requests'], queryFn: () => api<JoinRequest[]>('/api/v1/join-requests'), retry: false });
+  const presence = useTeamPresence();
+  const statusOf = (userId: string) => presence.data?.find((p) => p.userId === userId)?.status;
   const refresh = () => Promise.all([
     queryClient.invalidateQueries({ queryKey: ['members'] }),
     queryClient.invalidateQueries({ queryKey: ['invitations'] }),
@@ -101,35 +104,41 @@ export function TeamPage() {
         {members.isPending && <p className="mt-3 text-muted">Cargando equipo…</p>}
         {members.isError && <div className="mt-3"><Alert>No pudimos cargar el equipo. Recarga la página.</Alert></div>}
         <ul className="mt-3 divide-y divide-line rounded-xl border border-line bg-surface">
-          {members.data?.map((m) => (
-            <li key={m.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-ink">{m.name}</p>
-                <p className="truncate text-sm text-muted">{m.email}</p>
-              </div>
-              {myRole === 'owner' && m.role !== 'owner' ? (
-                <select
-                  aria-label={`Rol de ${m.name}`}
-                  value={m.role}
-                  onChange={(e) => changeRole.mutate({ id: m.id, role: e.target.value as TeamRole })}
-                  className="rounded-md border border-line bg-surface px-2 py-1 text-sm"
-                >
-                  <option value="admin">{ROLE_LABELS.admin}</option>
-                  <option value="member">{ROLE_LABELS.member}</option>
-                </select>
-              ) : (
-                <span className="text-sm text-muted">{ROLE_LABELS[m.role]}</span>
-              )}
-              {canRemove(myRole, m) && m.userId !== session.data?.user.id && (
-                <button
-                  onClick={() => confirm(`¿Quitar a ${m.name} del equipo?`) && remove.mutate(m.id)}
-                  className="inline-flex min-h-11 items-center px-2 text-sm text-danger underline"
-                >
-                  Quitar
-                </button>
-              )}
-            </li>
-          ))}
+          {members.data?.map((m) => {
+            const status = statusOf(m.userId);
+            return (
+              <li key={m.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-2 font-medium text-ink">
+                    {status && <PresenceDot status={status} />}
+                    <span className="truncate">{m.name}</span>
+                  </p>
+                  <p className="truncate text-sm text-muted">{m.email}{status && ` · ${PRESENCE[status].label}`}</p>
+                </div>
+                {myRole === 'owner' && m.role !== 'owner' ? (
+                  <select
+                    aria-label={`Rol de ${m.name}`}
+                    value={m.role}
+                    onChange={(e) => changeRole.mutate({ id: m.id, role: e.target.value as TeamRole })}
+                    className="rounded-md border border-line bg-surface px-2 py-1 text-sm"
+                  >
+                    <option value="admin">{ROLE_LABELS.admin}</option>
+                    <option value="member">{ROLE_LABELS.member}</option>
+                  </select>
+                ) : (
+                  <span className="text-sm text-muted">{ROLE_LABELS[m.role]}</span>
+                )}
+                {canRemove(myRole, m) && m.userId !== session.data?.user.id && (
+                  <button
+                    onClick={() => confirm(`¿Quitar a ${m.name} del equipo?`) && remove.mutate(m.id)}
+                    className="inline-flex min-h-11 items-center px-2 text-sm text-danger underline"
+                  >
+                    Quitar
+                  </button>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </section>
 

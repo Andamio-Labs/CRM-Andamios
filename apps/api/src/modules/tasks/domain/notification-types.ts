@@ -4,6 +4,7 @@
  */
 export const NOTIFICATION_TYPES = {
   task_reminder: { label: 'Recordatorios', description: 'Tus tareas y seguimientos por vencer', emailLocked: false, important: false },
+  meeting_invite: { label: 'Reuniones', description: 'Te invitaron a una reunión o se canceló una', emailLocked: false, important: false },
   no_reply: { label: 'Clientes esperando respuesta', description: 'Conversaciones sin contestar hace varias horas', emailLocked: false, important: false },
   sla_breach: { label: 'Primera respuesta fuera de tiempo', description: 'Conversaciones que superaron el tiempo de respuesta (SLA)', emailLocked: false, important: true },
   deal_won: { label: 'Negocios ganados', description: 'Cuando alguien del equipo cierra un negocio', emailLocked: false, important: false },
@@ -20,11 +21,15 @@ export const NOTIFICATION_TYPE_IDS = Object.keys(NOTIFICATION_TYPES) as [Notific
 export interface Preference { inApp: boolean; email: boolean; push: boolean }
 export const DEFAULT_PREFERENCE: Preference = { inApp: true, email: true, push: true };
 
+/** El correo de este tipo sale siempre (plan y pagos). */
+export function isEmailLocked(type: string): boolean {
+  return (NOTIFICATION_TYPES as Record<string, { emailLocked: boolean }>)[type]?.emailLocked ?? false;
+}
+
 /** Preferencia efectiva: lo guardado, o el valor por defecto; el correo bloqueado siempre sale. */
 export function effectivePreference(type: string, stored: Preference | undefined): Preference {
   const pref = stored ?? DEFAULT_PREFERENCE;
-  const locked = (NOTIFICATION_TYPES as Record<string, { emailLocked: boolean }>)[type]?.emailLocked ?? false;
-  return { inApp: pref.inApp, email: locked || pref.email, push: pref.push };
+  return { inApp: pref.inApp, email: isEmailLocked(type) || pref.email, push: pref.push };
 }
 
 export function isImportant(type: string) {

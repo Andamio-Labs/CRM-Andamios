@@ -21,6 +21,7 @@
   --color-danger-soft: #fbe9e5;
   --color-success: #1e7a46;
   --color-success-soft: #e3f2e7;
+  --color-info: #2f6fde;
   --color-info-soft: #e8effc;
   --color-auth-canvas: #08090c;
   --color-auth-panel: #101116;
@@ -45,6 +46,7 @@
   --color-danger-soft: #3b1e22;
   --color-success: #70d39b;
   --color-success-soft: #173728;
+  --color-info: #7aa7ff;
   --color-info-soft: #172943;
 }
 

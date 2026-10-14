@@ -4,10 +4,11 @@ import { and, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type pg from 'pg';
 import { z } from 'zod';
 import type { Database, Transaction } from '../../shared/database/database.js';
-import { notificationPreferences, notifications, pushSubscriptions } from '../../shared/database/schema.js';
+import { memberPresence, notificationPreferences, notifications, pushSubscriptions } from '../../shared/database/schema.js';
 import { AppError } from '../../shared/http/app-error.js';
 import { ZodBody } from '../../shared/http/zod-validation.pipe.js';
-import { effectivePreference, isImportant, NOTIFICATION_TYPE_IDS, NOTIFICATION_TYPES, type Preference } from './domain/notification-types.js';
+import { mutesAlerts } from '../team/domain/presence.js';
+import { effectivePreference, isEmailLocked, isImportant, NOTIFICATION_TYPE_IDS, NOTIFICATION_TYPES, type Preference } from './domain/notification-types.js';
 import { withTenant } from '../../shared/database/with-tenant.js';
 import type { Env } from '../../config/env.js';
 import type { Mailer } from '../../shared/mail/mailer.js';
@@ -63,19 +64,24 @@ export class NotificationsService {
 
   async deliver(tenantId: string, created: (typeof notifications.$inferSelect)[], email: boolean) {
     if (!created.length) return;
-    const { rows } = await this.conn.pool.query<{ id: string; email: string; name: string }>(`SELECT id, email, name FROM "user" WHERE id = ANY($1)`, [created.map((n) => n.userId)]);
     const userIds = created.map((n) => n.userId);
+    const { rows } = await this.conn.pool.query<{ id: string; email: string; name: string }>(`SELECT id, email, name FROM "user" WHERE id = ANY($1)`, [userIds]);
     // En serie: una transacción es una sola conexión y pg no admite consultas en paralelo sobre ella.
-    const [prefs, devices] = await withTenant(this.db, tenantId, async (tx) => [
+    const [prefs, devices, presence] = await withTenant(this.db, tenantId, async (tx) => [
       await tx.select().from(notificationPreferences).where(inArray(notificationPreferences.userId, userIds)),
       await tx.select().from(pushSubscriptions).where(inArray(pushSubscriptions.userId, userIds)),
+      await tx.select().from(memberPresence).where(inArray(memberPresence.userId, userIds)),
     ] as const);
+    const now = new Date();
     for (const n of created) {
       if (n.inApp) this.realtime.publish(tenantId, 'notification.created', { userId: n.userId, notificationId: n.id }, n.userId);
       const user = rows.find((r) => r.id === n.userId);
       const pref = effectivePreference(n.type, prefs.find((p) => p.userId === n.userId && p.type === n.type));
-      if (pref.push) await this.sendPush(tenantId, devices.filter((d) => d.userId === n.userId), n);
-      if (!email || !user || !pref.email) continue;
+      // E01-S09 — Con no molestar o desconectado elegido, el aviso espera en la campana: ni push ni correo
+      // (los de plan y pagos salen igual por correo).
+      const muted = mutesAlerts(presence.find((p) => p.userId === n.userId), now);
+      if (pref.push && !muted) await this.sendPush(tenantId, devices.filter((d) => d.userId === n.userId), n);
+      if (!email || !user || !pref.email || (muted && !isEmailLocked(n.type))) continue;
       const url = n.link ? `${this.env.APP_URL}${n.link}` : this.env.APP_URL;
       await this.mailer.send({
         to: user.email,

@@ -6,6 +6,7 @@ import { ReportsPage } from './features/reports/ReportsPage';
 import { ContactsPage } from './features/contacts/ContactsPage';
 import { HomePage } from './features/home/HomePage';
 import { InboxPage } from './features/inbox/InboxPage';
+import { MeetingsPage } from './features/meetings/MeetingsPage';
 import { TasksPage } from './features/tasks/TasksPage';
 import { LegalPage } from './features/legal/legal';
 import { PipelinePage } from './features/pipeline/PipelinePage';
@@ -35,6 +36,7 @@ const routes = [
   createRoute({ getParentRoute: () => rootRoute, path: '/contacts', beforeLoad: requireSession, component: ContactsPage }),
   createRoute({ getParentRoute: () => rootRoute, path: '/inbox', beforeLoad: requireSession, component: InboxPage, validateSearch: (s: Record<string, unknown>): { c?: string } => (typeof s.c === 'string' ? { c: s.c } : {}) }),
   createRoute({ getParentRoute: () => rootRoute, path: '/tasks', beforeLoad: requireSession, component: TasksPage }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/meetings', beforeLoad: requireSession, component: MeetingsPage, validateSearch: (s: Record<string, unknown>): { m?: string } => (typeof s.m === 'string' ? { m: s.m } : {}) }),
   createRoute({ getParentRoute: () => rootRoute, path: '/reports', beforeLoad: requireSession, component: ReportsPage }),
   createRoute({ getParentRoute: () => rootRoute, path: '/legal/terminos', component: () => <LegalPage doc="terminos" /> }),
   createRoute({ getParentRoute: () => rootRoute, path: '/legal/privacidad', component: () => <LegalPage doc="privacidad" /> }),

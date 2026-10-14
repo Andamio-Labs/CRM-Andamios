@@ -10,6 +10,8 @@ import { badRequest } from '../../shared/http/errors.js';
 import { DB, PG_POOL } from '../../shared/tokens.js';
 import type { AuthContext } from '../identity/infrastructure/http/session.guard.js';
 import { NotificationsService } from '../tasks/notifications.service.js';
+import { PresenceService } from '../team/application/presence.service.js';
+import { takesNewLeads } from '../team/domain/presence.js';
 import { MessagingService } from '../whatsapp/application/messaging.service.js';
 import { nextAssignee } from './domain/round-robin.js';
 
@@ -43,6 +45,7 @@ export class AutomationService implements OnModuleInit {
     private readonly events: DomainEvents,
     private readonly notifications: NotificationsService,
     private readonly messaging: MessagingService,
+    private readonly presence: PresenceService,
   ) {}
 
   onModuleInit() {
@@ -82,8 +85,13 @@ export class AutomationService implements OnModuleInit {
       const { rows } = await tx.execute(sql`SELECT "userId" FROM member WHERE "organizationId" = ${tenantId} AND role = 'member' ORDER BY "userId"`);
       const sellers = (rows as { userId: string }[]).map((r) => r.userId);
       const candidates = config.userIds?.length ? sellers.filter((id) => config.userIds!.includes(id)) : sellers;
-      const assignee = nextAssignee(candidates, config.lastAssignee ?? null);
-      if (!assignee) return this.log(tx, tenantId, 'new_lead', contactId, 'skipped', 'No hay vendedores para asignar');
+      // E01-S09 — Asignación consciente: quien está en no molestar o desconectado no recibe leads nuevos.
+      const available = new Set((await this.presence.team(tx, tenantId)).filter((p) => takesNewLeads(p.status)).map((p) => p.userId));
+      const assignee = nextAssignee(candidates, config.lastAssignee ?? null, (id) => available.has(id));
+      if (!assignee) {
+        const why = candidates.length ? 'Ningún vendedor está disponible (no molestar o desconectado)' : 'No hay vendedores para asignar';
+        return this.log(tx, tenantId, 'new_lead', contactId, 'skipped', why);
+      }
 
       const [contact] = await tx.update(contacts).set({ ownerId: assignee }).where(eq(contacts.id, contactId)).returning({ name: contacts.name });
       if (dealId) await tx.update(deals).set({ ownerId: assignee }).where(eq(deals.id, dealId));

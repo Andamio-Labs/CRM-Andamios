@@ -154,8 +154,8 @@ export class InvitationsService {
   }
 
   /**
-   * Con sesión: la cuenta logueada debe ser la del correo invitado.
-   * Sin sesión: crea la cuenta (el enlace prueba que el correo es suyo → queda verificado).
+   * Con la sesión del correo invitado: se une esa cuenta.
+   * Sin sesión, o con la de otra persona: crea la cuenta (el enlace prueba que el correo es suyo → queda verificado).
    */
   async accept(id: string, sessionUser: SessionUser | null, body: unknown, context: AcceptanceContext): Promise<void> {
     const invitation = await this.find(id);
@@ -163,17 +163,19 @@ export class InvitationsService {
 
     let userId: string;
     let createdUserId: string | null = null;
-    if (sessionUser) {
-      if (sessionUser.email.toLowerCase() !== invitation.email) {
-        throw new ForbiddenException('Esta invitación es para otro correo.');
-      }
+    if (sessionUser?.email.toLowerCase() === invitation.email) {
       userId = sessionUser.id;
     } else {
+      // La sesión de OTRA persona (típico: quien invitó abre el enlace en su propio navegador) nunca sirve
+      // para unirse, pero tampoco impide crear la cuenta invitada.
+      const parsed = newAccountSchema.safeParse(body);
+      if (sessionUser && !parsed.success) {
+        throw new ForbiddenException(`Esta invitación es para ${invitation.email}. Cierra tu sesión para aceptarla.`);
+      }
       const { rowCount } = await this.conn.pool.query(`SELECT 1 FROM "user" WHERE email = $1`, [invitation.email]);
       if (rowCount) {
         throw new AppError(HttpStatus.CONFLICT, 'LOGIN_REQUIRED', 'Ya tienes una cuenta: inicia sesión para aceptar.');
       }
-      const parsed = newAccountSchema.safeParse(body);
       if (!parsed.success) throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'Datos inválidos' });
       userId = createdUserId = await this.createVerifiedUser(invitation.email, parsed.data);
       await this.legal.recordAcceptance(userId, context);

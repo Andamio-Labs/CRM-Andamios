@@ -8,7 +8,10 @@ coverage/
 
 backups/
 
-storage/
+# Archivos subidos en local (STORAGE_DIR). Solo las carpetas de datos: `storage/` a secas también
+# ignoraba el código de apps/api/src/shared/storage/.
+/storage/
+apps/api/storage/
 
 # Tipos generados por Astro
 apps/landing/.astro/
