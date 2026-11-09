@@ -78,6 +78,22 @@ describe('Filtros, vistas y búsqueda', () => {
       expect(res.body.contacts.map((c: { name: string }) => c.name)).toContain(expected);
     });
 
+    it.each([
+      ['error de escritura (E02-S10)', 'Alvares', 'José Álvarez'],
+      ['error de escritura sin tilde (E02-S10)', 'Gomes', 'Ana Gómez'],
+      ['teléfono con guiones (E02-S10)', '300-111-2233', 'José Álvarez'],
+      ['teléfono con indicativo y paréntesis (E02-S10)', '+57 (300) 1112233', 'José Álvarez'],
+    ])('%s', async (_, q, expected) => {
+      const res = await team.owner.api.get(`/api/v1/search?q=${encodeURIComponent(q)}`).expect(200);
+      expect(res.body.contacts.map((c: { name: string }) => c.name)).toContain(expected);
+    });
+
+    it('la tolerancia a errores solo entra si nada coincide exacto (E02-S10)', async () => {
+      const res = await team.owner.api.get('/api/v1/search?q=ana').expect(200);
+      expect(res.body.contacts.map((c: { name: string }) => c.name)).toEqual(['Ana Gómez']);
+      expect((await team.owner.api.get('/api/v1/search?q=xqzw').expect(200)).body.contacts).toEqual([]);
+    });
+
     it('no devuelve resultados de otra empresa', async () => {
       const other = as((await createTeam(t, 'Otra')).owner.agent);
       const res = await other.get('/api/v1/search?q=jose').expect(200);

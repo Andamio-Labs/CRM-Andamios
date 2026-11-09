@@ -204,7 +204,7 @@ function CalendarView({ onOpen }: { onOpen: (id: string) => void }) {
           const items = byDay.get(cell.key) ?? [];
           return (
             <div key={cell.key} className={`min-h-16 bg-surface p-1 sm:min-h-24 ${cell.inMonth ? '' : 'opacity-50'}`}>
-              <span className={`inline-grid size-6 place-items-center rounded-full text-[11px] ${cell.key === today ? 'bg-honey font-semibold text-ink' : 'text-muted'}`}>{cell.day}</span>
+              <span className={`inline-grid size-6 place-items-center rounded-full text-[11px] ${cell.key === today ? 'bg-honey font-semibold text-on-honey' : 'text-muted'}`}>{cell.day}</span>
               <ul className="mt-0.5 flex flex-col gap-0.5">
                 {items.slice(0, 3).map((meeting) => (
                   <li key={meeting.id}>
@@ -488,7 +488,7 @@ function Modal({ title, subtitle, onClose, wide, children }: { title: string; su
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
   return (
-    <div role="dialog" aria-modal="true" aria-label={title} className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-ink/60 p-4 sm:items-center" onClick={onClose}>
+    <div role="dialog" aria-modal="true" aria-label={title} className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-scrim/60 p-4 sm:items-center" onClick={onClose}>
       <div className={`w-full ${wide ? 'max-w-2xl' : 'max-w-lg'} overflow-hidden rounded-2xl bg-surface shadow-2xl`} onClick={(event) => event.stopPropagation()}>
         <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
           <div className="min-w-0">
@@ -509,7 +509,7 @@ function ActionCard({ icon, title, text, onClick, primary, busy }: { icon: React
       type="button"
       onClick={onClick}
       disabled={busy}
-      className={`flex min-h-32 flex-col items-start gap-3 rounded-2xl border p-4 text-left shadow-sm transition disabled:opacity-60 ${primary ? 'border-honey bg-honey text-ink hover:brightness-95' : 'border-line bg-surface text-ink hover:border-honey/60'}`}
+      className={`flex min-h-32 flex-col items-start gap-3 rounded-2xl border p-4 text-left shadow-sm transition disabled:opacity-60 ${primary ? 'border-honey bg-honey text-on-honey hover:brightness-95' : 'border-line bg-surface text-ink hover:border-honey/60'}`}
     >
       <span className={`grid size-10 place-items-center rounded-xl ${primary ? 'bg-ink/10' : 'bg-honey-soft'}`}>{icon}</span>
       <span>

@@ -15,6 +15,10 @@ import { DB, ENV, PG_POOL } from '../tokens.js';
 const rooms = {
   all: (t: string) => `t:${t}:all`,
   user: (t: string, u: string) => `t:${t}:u:${u}`,
+  // E03-S08 — Vendedores con "solo lo asignado" y el pool activo: eventos de negocios sin dueño.
+  pool: (t: string) => `t:${t}:pool`,
+  // Mensajes dirigidos a una persona (chat interno): todos entran a la suya, sin importar la visibilidad.
+  me: (t: string, u: string) => `t:${t}:me:${u}`,
   // Salas de control: solo para cortar conexiones, nunca reciben eventos de datos.
   controlUser: (t: string, u: string) => `t:${t}:ctl:u:${u}`,
   controlSellers: (t: string) => `t:${t}:ctl:sellers`,
@@ -56,8 +60,9 @@ export class RealtimeGateway implements OnGatewayConnection {
       const [settings] = await withTenant(this.db, tenantId, (tx) => tx.select().from(tenantSettings));
       const restricted = recordVisibility(role, { sellersSeeOnlyAssigned: settings?.sellersSeeOnlyAssigned ?? false }) === 'assigned';
 
-      const joined = [restricted ? rooms.user(tenantId, userId) : rooms.all(tenantId), rooms.controlUser(tenantId, userId)];
+      const joined = [restricted ? rooms.user(tenantId, userId) : rooms.all(tenantId), rooms.controlUser(tenantId, userId), rooms.me(tenantId, userId)];
       if (role === 'member') joined.push(rooms.controlSellers(tenantId));
+      if (restricted && settings?.leadPool) joined.push(rooms.pool(tenantId));
       await client.join(joined);
       client.emit('ready');
     } catch (error) {
@@ -66,10 +71,18 @@ export class RealtimeGateway implements OnGatewayConnection {
     }
   }
 
-  /** Socket.IO deduplica: quien esté en ambas salas recibe el evento una sola vez. */
-  publish(tenantId: string, event: string, payload: object, ownerId: string | null) {
-    const targets = [rooms.all(tenantId), ...(ownerId ? [rooms.user(tenantId, ownerId)] : [])];
+  /**
+   * Socket.IO deduplica: quien esté en ambas salas recibe el evento una sola vez.
+   * `pool`: el evento es de un negocio del pool (sin dueño, o recién tomado), también para sus vendedores.
+   */
+  publish(tenantId: string, event: string, payload: object, ownerId: string | null, pool = false) {
+    const targets = [rooms.all(tenantId), ...(ownerId ? [rooms.user(tenantId, ownerId)] : []), ...(pool ? [rooms.pool(tenantId)] : [])];
     this.server?.to(targets).emit(event, payload);
+  }
+
+  /** Solo a estas personas (chat interno). El payload no lleva contenido: el cliente lo pide con su sesión. */
+  publishToUsers(tenantId: string, event: string, payload: object, userIds: string[]) {
+    if (userIds.length) this.server?.to(userIds.map((u) => rooms.me(tenantId, u))).emit(event, payload);
   }
 
   /** Baja o cambio de rol: el usuario debe re-autorizarse. */

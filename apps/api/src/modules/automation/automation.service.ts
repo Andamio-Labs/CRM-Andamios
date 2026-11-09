@@ -3,7 +3,7 @@ import { and, desc, eq, sql } from 'drizzle-orm';
 import type pg from 'pg';
 import { z } from 'zod';
 import type { Database, Transaction } from '../../shared/database/database.js';
-import { type AutomationRule, automationRules, automationRuns, contacts, conversations, deals, tasks } from '../../shared/database/schema.js';
+import { type AutomationRule, automationRules, automationRuns, contacts, conversations, deals, tasks, tenantSettings } from '../../shared/database/schema.js';
 import { withTenant } from '../../shared/database/with-tenant.js';
 import { DomainEvents } from '../../shared/events/domain-events.js';
 import { badRequest } from '../../shared/http/errors.js';
@@ -76,21 +76,28 @@ export class AutomationService implements OnModuleInit {
     return withTenant(this.db, auth.tenantId, (tx) => tx.select().from(automationRuns).orderBy(desc(automationRuns.createdAt), desc(automationRuns.id)).limit(100));
   }
 
-  /** Lead nuevo → responsable por turnos (entre vendedores o los elegidos) + tarea de primera respuesta. */
+  /**
+   * Lead nuevo → responsable por turnos (entre vendedores o los elegidos) + tarea de primera respuesta.
+   * E03-S08 — Con el pool activo nadie lo recibe por turnos: se avisa a los vendedores disponibles y lo toma el primero.
+   */
   private async onNewLead(tenantId: string, contactId: string, dealId: string | null, conversationId: string | null) {
-    await withTenant(this.db, tenantId, async (tx) => {
+    const created = await withTenant(this.db, tenantId, async (tx) => {
       const rule = await this.rule(tx, 'new_lead');
-      if (!rule) return;
+      const [settings] = await tx.select({ leadPool: tenantSettings.leadPool }).from(tenantSettings);
+      if (settings?.leadPool) {
+        if (rule) await this.log(tx, tenantId, 'new_lead', contactId, 'skipped', 'Pool de leads activo: lo toma el primer vendedor');
+        return this.offerToPool(tx, tenantId, contactId);
+      }
+      if (!rule) return [];
       const config = RULE_CONFIGS.new_lead.parse(rule.config);
-      const { rows } = await tx.execute(sql`SELECT "userId" FROM member WHERE "organizationId" = ${tenantId} AND role = 'member' ORDER BY "userId"`);
-      const sellers = (rows as { userId: string }[]).map((r) => r.userId);
-      const candidates = config.userIds?.length ? sellers.filter((id) => config.userIds!.includes(id)) : sellers;
+      const candidates = (await this.sellers(tx, tenantId)).filter((id) => !config.userIds?.length || config.userIds.includes(id));
       // E01-S09 — Asignación consciente: quien está en no molestar o desconectado no recibe leads nuevos.
       const available = new Set((await this.presence.team(tx, tenantId)).filter((p) => takesNewLeads(p.status)).map((p) => p.userId));
       const assignee = nextAssignee(candidates, config.lastAssignee ?? null, (id) => available.has(id));
       if (!assignee) {
         const why = candidates.length ? 'Ningún vendedor está disponible (no molestar o desconectado)' : 'No hay vendedores para asignar';
-        return this.log(tx, tenantId, 'new_lead', contactId, 'skipped', why);
+        await this.log(tx, tenantId, 'new_lead', contactId, 'skipped', why);
+        return [];
       }
 
       const [contact] = await tx.update(contacts).set({ ownerId: assignee }).where(eq(contacts.id, contactId)).returning({ name: contacts.name });
@@ -102,7 +109,24 @@ export class AutomationService implements OnModuleInit {
       });
       await tx.update(automationRules).set({ config: { ...config, lastAssignee: assignee } }).where(eq(automationRules.rule, 'new_lead'));
       await this.log(tx, tenantId, 'new_lead', contactId, 'ok', `Asignado a ${assignee}`);
+      return [];
     });
+    // El aviso del pool es en vivo, solo en la campana: un correo por cada lead a todo el equipo sería ruido.
+    await this.notifications.deliver(tenantId, created, false);
+  }
+
+  private async offerToPool(tx: Transaction, tenantId: string, contactId: string) {
+    const sellers = new Set(await this.sellers(tx, tenantId));
+    const available = (await this.presence.team(tx, tenantId)).filter((p) => sellers.has(p.userId) && takesNewLeads(p.status)).map((p) => p.userId);
+    const [contact] = await tx.select({ name: contacts.name }).from(contacts).where(eq(contacts.id, contactId));
+    return this.notifications.create(tx, tenantId, available, {
+      type: 'lead_pool', title: `Nuevo lead en el pool: ${contact?.name ?? 'cliente nuevo'}`, body: 'El primero que lo tome se queda con él.', link: '/deals?pool=1',
+    });
+  }
+
+  private async sellers(tx: Transaction, tenantId: string) {
+    const { rows } = await tx.execute(sql`SELECT "userId" FROM member WHERE "organizationId" = ${tenantId} AND role = 'member' ORDER BY "userId"`);
+    return (rows as { userId: string }[]).map((r) => r.userId);
   }
 
   /** Cambio de etapa → plantilla configurada para esa etapa, a la conversación más reciente del contacto. */

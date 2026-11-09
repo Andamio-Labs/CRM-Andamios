@@ -39,6 +39,8 @@ export const tenantSettings = pgTable('tenant_settings', {
   outOfHoursMessage: text('out_of_hours_message').notNull(),
   /** E08-S02 */
   firstResponseSlaMinutes: integer('first_response_sla_minutes').notNull().default(60),
+  /** E03-S08 */
+  leadPool: boolean('lead_pool').notNull().default(false),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -196,6 +198,8 @@ export const deals = pgTable('deals', {
   position: doublePrecision('position').notNull().default(0),
   customFields: jsonb('custom_fields').$type<CustomFieldValues>().notNull().default({}),
   description: text('description'),
+  /** E07-S04 — Desde cuándo está en la etapa actual. */
+  stageEnteredAt: ts('stage_entered_at').notNull().defaultNow(),
   createdAt: ts('created_at').notNull().defaultNow(),
   updatedAt: ts('updated_at').notNull().defaultNow(),
 });
@@ -404,7 +408,7 @@ export const aiInteractions = pgTable('ai_interactions', {
   conversationId: uuid('conversation_id'),
   messageId: uuid('message_id'),
   replyMessageId: uuid('reply_message_id'),
-  channel: text('channel').$type<'whatsapp' | 'preview'>().notNull(),
+  channel: text('channel').$type<'whatsapp' | 'preview' | 'insight'>().notNull(),
   outcome: text('outcome').$type<'replied' | 'handoff' | 'blocked' | 'error' | 'quota'>().notNull(),
   model: text('model'),
   prompt: jsonb('prompt').$type<{ system: string; messages: { role: string; content: string }[] }>().notNull(),
@@ -571,6 +575,75 @@ export const meetings = pgTable('meetings', {
   dealId: uuid('deal_id'),
   minutes: text('minutes'),
   recordingUrl: text('recording_url'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});
+
+export type RobotTrigger = { type: 'enter' } | { type: 'stale'; days: number } | { type: 'no_reply'; hours: number } | { type: 'won' };
+export type RobotAction =
+  | { type: 'notify'; to: 'owner' | 'admins' }
+  | { type: 'task'; title: string; dueHours: number }
+  | { type: 'assign'; userId: string }
+  | { type: 'move'; stageId: string };
+export interface RobotCondition { minValue?: number; unassigned?: boolean }
+
+/** E07-S04 — Robots por etapa. */
+export const stageRobots = pgTable('stage_robots', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: text('tenant_id').notNull(),
+  pipelineId: uuid('pipeline_id').notNull(),
+  stageId: uuid('stage_id'),
+  trigger: jsonb('trigger').$type<RobotTrigger>().notNull(),
+  condition: jsonb('condition').$type<RobotCondition>().notNull().default({}),
+  action: jsonb('action').$type<RobotAction>().notNull(),
+  enabled: boolean('enabled').notNull().default(true),
+  createdBy: text('created_by'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});
+
+export const stageRobotRuns = pgTable('stage_robot_runs', {
+  id: bigserial('id', { mode: 'number' }).primaryKey(),
+  tenantId: text('tenant_id').notNull(),
+  robotId: uuid('robot_id').notNull(),
+  dealId: uuid('deal_id').notNull(),
+  runKey: text('run_key').notNull(),
+  status: text('status').$type<'ok' | 'skipped' | 'error'>().notNull(),
+  detail: text('detail'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});
+
+export type TeamChatKind = 'general' | 'direct' | 'group' | 'notes';
+
+/** E12-S03 — Chat interno del equipo. */
+export const teamChats = pgTable('team_chats', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: text('tenant_id').notNull(),
+  kind: text('kind').$type<TeamChatKind>().notNull(),
+  title: text('title'),
+  dealId: uuid('deal_id'),
+  directKey: text('direct_key'),
+  createdBy: text('created_by'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  lastMessageAt: ts('last_message_at'),
+});
+
+export const teamChatMembers = pgTable(
+  'team_chat_members',
+  {
+    tenantId: text('tenant_id').notNull(),
+    chatId: uuid('chat_id').notNull(),
+    userId: text('user_id').notNull(),
+    lastReadAt: ts('last_read_at'),
+  },
+  (t) => [primaryKey({ columns: [t.chatId, t.userId] })],
+);
+
+export const teamMessages = pgTable('team_messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: text('tenant_id').notNull(),
+  chatId: uuid('chat_id').notNull(),
+  authorId: text('author_id'),
+  body: text('body').notNull(),
+  deletedAt: ts('deleted_at'),
   createdAt: ts('created_at').notNull().defaultNow(),
 });
 

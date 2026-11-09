@@ -1,8 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
+import { SearchIcon } from './icons';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
 import { useDebouncedValue } from '../use-debounced-value';
+
+const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
 interface SearchResult {
   contacts: { id: string; name: string; phone: string | null }[];
@@ -11,7 +14,11 @@ interface SearchResult {
 }
 
 /** Búsqueda global con la misma interacción existente, presentada como control compacto. */
-export function CommandPalette({ label = 'Buscar' }: { label?: string }) {
+/**
+ * `sidebar`: botón ancho del menú lateral con la pista del atajo. `shortcut`: Ctrl/⌘ K abre la búsqueda
+ * (en una sola instancia, para no abrir dos diálogos).
+ */
+export function CommandPalette({ label = 'Buscar', variant = 'header', shortcut = false }: { label?: string; variant?: 'header' | 'sidebar'; shortcut?: boolean }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
@@ -20,6 +27,18 @@ export function CommandPalette({ label = 'Buscar' }: { label?: string }) {
   const results = useQuery({ queryKey: ['palette', query], queryFn: () => api<SearchResult>(`/api/v1/search?q=${encodeURIComponent(query)}`), enabled: query.length >= 2 });
 
   useEffect(() => { if (open) input.current?.focus(); }, [open]);
+  useEffect(() => {
+    if (!shortcut) return;
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setOpen(true);
+      }
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [shortcut]);
 
   function go(to: string) {
     setOpen(false);
@@ -29,15 +48,23 @@ export function CommandPalette({ label = 'Buscar' }: { label?: string }) {
 
   return (
     <>
-      <button onClick={() => setOpen(true)} className="hidden min-h-9 min-w-24 items-center gap-2 rounded-lg border border-line px-3 text-xs text-muted sm:inline-flex">
-        <svg aria-hidden viewBox="0 0 24 24" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-        {label}
-      </button>
-      <button onClick={() => setOpen(true)} aria-label="Buscar" className="inline-flex min-h-11 min-w-11 items-center justify-center text-ink sm:hidden">
+      {variant === 'sidebar' ? (
+        <button onClick={() => setOpen(true)} className="flex min-h-9 w-full items-center gap-2 rounded-lg border border-line bg-canvas px-2.5 text-xs text-muted transition hover:border-honey/60 hover:text-ink">
+          <SearchIcon size={14} />
+          <span className="flex-1 text-left">{label}</span>
+          <kbd className="rounded border border-line px-1 font-sans text-[10px] text-muted">{isMac ? '⌘K' : 'Ctrl K'}</kbd>
+        </button>
+      ) : (
+        <button onClick={() => setOpen(true)} className="hidden min-h-9 min-w-24 items-center gap-2 rounded-lg border border-line px-3 text-xs text-muted sm:inline-flex">
+          <SearchIcon size={14} />
+          {label}
+        </button>
+      )}
+      <button onClick={() => setOpen(true)} aria-label="Buscar" className={`${variant === 'sidebar' ? 'hidden' : 'inline-flex sm:hidden'} min-h-11 min-w-11 items-center justify-center text-ink`}>
         <svg aria-hidden viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
       </button>
       {open && (
-        <div role="dialog" aria-modal="true" aria-label="Búsqueda global" className="fixed inset-0 z-30 flex items-start justify-center bg-ink/40 px-4 pt-[10vh]" onClick={() => setOpen(false)}>
+        <div role="dialog" aria-modal="true" aria-label="Búsqueda global" className="fixed inset-0 z-30 flex items-start justify-center bg-scrim/40 px-4 pt-[10vh]" onClick={() => setOpen(false)}>
           <div className="w-full max-w-lg rounded-xl bg-surface shadow-xl" onClick={(e) => e.stopPropagation()}>
             <input ref={input} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Busca clientes, empresas o negocios…" aria-label="Buscar" className="h-12 w-full rounded-t-xl border-b border-line px-4 outline-none" />
             <div className="max-h-[60vh] overflow-y-auto p-2">
@@ -98,7 +125,7 @@ export function AccountBanner() {
 /** Mismo patrón que el banner de "Conecta un canal" del Inicio: ícono, título, bajada y acción. */
 function Banner({ tone = 'honey', icon, title, text, cta }: { tone?: 'honey' | 'danger'; icon: string; title: string; text: string; cta: string }) {
   const box = tone === 'danger' ? 'border-danger/40 bg-danger-soft' : 'border-honey/50 bg-honey-soft';
-  const tile = tone === 'danger' ? 'bg-danger text-surface' : 'bg-honey text-ink';
+  const tile = tone === 'danger' ? 'bg-danger text-surface' : 'bg-honey text-on-honey';
   return (
     <section role="status" className={`mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 ${box}`}>
       <div className="flex items-center gap-3">

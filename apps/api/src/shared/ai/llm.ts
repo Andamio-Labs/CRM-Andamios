@@ -126,6 +126,13 @@ export class LocalLlm implements LlmProvider {
   }
 
   private answer(system: string) {
+    // E05-S10 — Resumen del cliente (marca INSIGHT_MARKER de modules/ai/domain/insights.ts).
+    if (system.includes('<resumen-cliente>')) {
+      const said = [...system.matchAll(/^\[cliente\] (.+)$/gm)].at(-1)?.[1]?.trim();
+      return JSON.stringify(said
+        ? { summary: `(Simulado) El cliente escribió: "${said.slice(0, 200)}".`, temperature: 'tibio', nextStep: 'Responder hoy con una propuesta concreta y agendar una llamada corta.', reply: '¡Hola! Gracias por escribirnos. ¿Te parece si agendamos una llamada corta para entender lo que necesitas?' }
+        : { summary: '(Simulado) Todavía no hay conversación con este cliente.', temperature: 'frio', nextStep: 'Escribirle para conocer qué necesita.', reply: '¡Hola! ¿En qué te podemos ayudar?' });
+    }
     const first = /<conocimiento>\n\[1\] ([\s\S]*?)(?:\n\[2\]|\n<\/conocimiento>)/.exec(system)?.[1]?.trim();
     return JSON.stringify(first
       ? { reply: `Según nuestra información: ${first.slice(0, 600)}`, handoff: false, fields: {} }

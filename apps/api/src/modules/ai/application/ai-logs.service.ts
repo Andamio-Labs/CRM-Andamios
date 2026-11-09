@@ -7,7 +7,7 @@ import { TenantContext } from '../../tenancy/application/tenant-context.js';
 
 export const listInteractionsSchema = z.object({
   outcome: z.enum(['replied', 'handoff', 'blocked', 'error', 'quota']).optional(),
-  channel: z.enum(['whatsapp', 'preview']).optional(),
+  channel: z.enum(['whatsapp', 'preview', 'insight']).optional(),
   cursor: z.string().max(200).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });

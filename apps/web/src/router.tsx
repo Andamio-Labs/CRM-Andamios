@@ -5,6 +5,7 @@ import { RegisterPage } from './features/auth/RegisterPage';
 import { ReportsPage } from './features/reports/ReportsPage';
 import { ContactsPage } from './features/contacts/ContactsPage';
 import { HomePage } from './features/home/HomePage';
+import { TeamChatPage } from './features/chat/TeamChatPage';
 import { InboxPage } from './features/inbox/InboxPage';
 import { MeetingsPage } from './features/meetings/MeetingsPage';
 import { TasksPage } from './features/tasks/TasksPage';
@@ -32,10 +33,11 @@ const routes = [
   createRoute({ getParentRoute: () => rootRoute, path: '/settings', beforeLoad: requireSession, component: CompanySettingsPage, validateSearch: (s: Record<string, unknown>): { tab?: string } => (typeof s.tab === 'string' ? { tab: s.tab } : {}) }),
   createRoute({ getParentRoute: () => rootRoute, path: '/profile', beforeLoad: requireSession, component: ProfilePage, validateSearch: (s: Record<string, unknown>): { tab?: string } => (typeof s.tab === 'string' ? { tab: s.tab } : {}) }),
   createRoute({ getParentRoute: () => rootRoute, path: '/team', beforeLoad: requireSession, component: TeamPage }),
-  createRoute({ getParentRoute: () => rootRoute, path: '/deals', beforeLoad: requireSession, component: PipelinePage }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/deals', beforeLoad: requireSession, component: PipelinePage, validateSearch: (s: Record<string, unknown>): { deal?: string; pool?: string; tab?: string } => ({ ...(typeof s.deal === 'string' ? { deal: s.deal } : {}), ...(s.pool !== undefined ? { pool: String(s.pool) } : {}), ...(typeof s.tab === 'string' ? { tab: s.tab } : {}) }) }),
   createRoute({ getParentRoute: () => rootRoute, path: '/contacts', beforeLoad: requireSession, component: ContactsPage }),
   createRoute({ getParentRoute: () => rootRoute, path: '/inbox', beforeLoad: requireSession, component: InboxPage, validateSearch: (s: Record<string, unknown>): { c?: string } => (typeof s.c === 'string' ? { c: s.c } : {}) }),
-  createRoute({ getParentRoute: () => rootRoute, path: '/tasks', beforeLoad: requireSession, component: TasksPage }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/tasks', beforeLoad: requireSession, component: TasksPage, validateSearch: (s: Record<string, unknown>): { view?: 'mine' | 'all' | 'calendar' } => (s.view === 'mine' || s.view === 'all' || s.view === 'calendar' ? { view: s.view } : {}) }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/team-chat', beforeLoad: requireSession, component: TeamChatPage, validateSearch: (s: Record<string, unknown>): { c?: string } => (typeof s.c === 'string' ? { c: s.c } : {}) }),
   createRoute({ getParentRoute: () => rootRoute, path: '/meetings', beforeLoad: requireSession, component: MeetingsPage, validateSearch: (s: Record<string, unknown>): { m?: string } => (typeof s.m === 'string' ? { m: s.m } : {}) }),
   createRoute({ getParentRoute: () => rootRoute, path: '/reports', beforeLoad: requireSession, component: ReportsPage }),
   createRoute({ getParentRoute: () => rootRoute, path: '/legal/terminos', component: () => <LegalPage doc="terminos" /> }),

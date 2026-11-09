@@ -28,6 +28,8 @@ aparece en el acento, el CTA primario y el asistente. Todo lo demás es neutro.
 | Prioridad media | amarillo suave | badge `Medium` |
 | Éxito | verde suave | badges `New`, `100% active` |
 | Estado del empleado | punto `success` / `info` / `danger` / `muted` | en línea, en visita, no molestar, desconectado (avatar del topbar y equipo) |
+| Texto sobre miel | `text-on-honey` (siempre oscuro) | todo texto o ícono sobre `bg-honey` sólido; `text-ink` se aclara en modo oscuro y pierde contraste |
+| Fondo de modales | `bg-scrim/40…60` (`#08090c`) | capa detrás de modales y paneles laterales; no usar `bg-ink`, que en modo oscuro es claro |
 | Colores de etapa | `#94a3b8, #60a5fa, #f5b700, #a78bfa, #34d399, #f87171` | punto de color por columna (ya en `STAGE_COLORS`) |
 
 Máximo 2–3 colores + 1 acento por pantalla. Los neutros no cuentan.
@@ -79,6 +81,7 @@ Viven en `apps/web/src/shared/ui/section.tsx`. Una pantalla nueva usa estos comp
 | `Badge` | Estados con fondo suave: `success`, `honey` (atención), `danger`, `info` y `neutral`. |
 | `EmptyState` | Ningún bloque en blanco: ícono, título, explicación y acción. |
 | `StatTile`, `Meter` | Métricas y barras de uso. `Meter` pasa a miel al 80 % y a rojo al 100 %. |
+| Íconos (`shared/ui/icons.tsx`) | Trazo de 1,75 px, `size` en px y `currentColor`. Uno por ítem del menú y en acciones clave; nada de caracteres sueltos (`›`, `×`, `▦`) como ícono. |
 | `labelClass`, `inputClass`, `textareaClass`, `tableHeadClass` | Label `text-xs font-semibold` muted, input `h-10`, header de tabla en mayúsculas chicas sobre miel suave. |
 
 ## Configuración

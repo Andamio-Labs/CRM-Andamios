@@ -40,9 +40,11 @@ export const updateMeetingSchema = z
 
 export const listMeetingsSchema = z
   .object({
-    scope: z.enum(['upcoming', 'past', 'recordings', 'minutes', 'range']).default('upcoming'),
+    scope: z.enum(['upcoming', 'past', 'recordings', 'minutes', 'range', 'all']).default('upcoming'),
     from: z.iso.datetime({ offset: true }).optional(),
     to: z.iso.datetime({ offset: true }).optional(),
+    /** Las reuniones de un negocio (ficha del negocio). */
+    dealId: z.uuid().optional(),
   })
   .refine((q) => q.scope !== 'range' || (q.from && q.to), 'El calendario necesita las fechas desde y hasta');
 
@@ -55,6 +57,7 @@ function scopeFilter(q: z.infer<typeof listMeetingsSchema>): SQL | undefined {
     case 'recordings': return isNotNull(meetings.recordingUrl);
     case 'minutes': return isNotNull(meetings.minutes);
     case 'range': return and(lt(meetings.startsAt, new Date(q.to!)), gt(meetings.endsAt, new Date(q.from!)));
+    case 'all': return undefined;
   }
 }
 
@@ -81,7 +84,7 @@ export class MeetingsService {
   async list(auth: AuthContext, query: z.infer<typeof listMeetingsSchema>) {
     const recentFirst = query.scope !== 'upcoming' && query.scope !== 'range';
     const rows = await this.tenant.run(auth, (tx) => this.scoped(tx)
-      .where(and(this.mine(auth), scopeFilter(query)))
+      .where(and(this.mine(auth), scopeFilter(query), query.dealId ? eq(meetings.dealId, query.dealId) : undefined))
       .orderBy(recentFirst ? desc(meetings.startsAt) : asc(meetings.startsAt))
       .limit(200));
     return this.views(auth, rows);

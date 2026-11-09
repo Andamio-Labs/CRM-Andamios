@@ -197,7 +197,7 @@ function NewContactForm({ onCreated }: { onCreated: () => void }) {
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-honey px-4 text-xs font-semibold text-ink shadow-sm transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-honey focus-visible:ring-offset-2 focus-visible:ring-offset-surface">＋ Añadir</button>
+      <button type="button" onClick={() => setOpen(true)} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-honey px-4 text-xs font-semibold text-on-honey shadow-sm transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-honey focus-visible:ring-offset-2 focus-visible:ring-offset-surface">＋ Añadir</button>
       {open && <div role="dialog" aria-modal="true" aria-labelledby="new-contact-title" className="fixed inset-0 z-40 flex items-center justify-center overflow-y-auto bg-black/75 p-3 backdrop-blur-sm sm:p-6" onClick={() => setOpen(false)}>
         <div ref={dialogRef} className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-2xl sm:max-h-[calc(100dvh-3rem)]" onClick={(event) => event.stopPropagation()}>
           <div className="flex items-start justify-between bg-honey px-5 py-5 sm:px-7">

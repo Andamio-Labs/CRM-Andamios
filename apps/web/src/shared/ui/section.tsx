@@ -5,7 +5,7 @@ import { useId } from 'react';
  * Primitivos del sistema de diseño (DESIGN.md): card blanca con borde fino y sombra mínima, encabezado
  * con ícono en tile miel suave, CTA miel, filtros con el activo en miel y badges de fondo suave.
  */
-export const primaryButton = 'inline-flex min-h-10 items-center justify-center gap-1 rounded-lg bg-honey px-4 text-xs font-semibold text-ink shadow-sm transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-honey focus-visible:ring-offset-2 disabled:opacity-60';
+export const primaryButton = 'inline-flex min-h-10 items-center justify-center gap-1 rounded-lg bg-honey px-4 text-xs font-semibold text-on-honey shadow-sm transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-honey focus-visible:ring-offset-2 disabled:opacity-60';
 export const secondaryButton = 'inline-flex min-h-10 items-center justify-center gap-1 rounded-lg border border-line bg-surface px-4 text-xs font-semibold text-ink transition hover:bg-honey-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-honey disabled:opacity-60';
 export const dangerButton = 'inline-flex min-h-10 items-center justify-center rounded-lg bg-danger px-4 text-xs font-semibold text-surface shadow-sm transition hover:brightness-95 disabled:opacity-60';
 export const linkButton = 'inline-flex min-h-10 items-center px-1 text-xs font-medium text-ink underline-offset-2 hover:underline';
@@ -72,7 +72,7 @@ export function Segmented<T extends string>({ label, options, value, onChange }:
           type="button"
           aria-pressed={value === key}
           onClick={() => onChange(key)}
-          className={`min-h-9 rounded-lg px-3 text-xs ${value === key ? 'bg-honey font-semibold text-ink' : 'text-muted hover:bg-canvas hover:text-ink'}`}
+          className={`min-h-9 rounded-lg px-3 text-xs ${value === key ? 'bg-honey font-semibold text-on-honey' : 'text-muted hover:bg-canvas hover:text-ink'}`}
         >
           {text}
         </button>

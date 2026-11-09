@@ -62,7 +62,7 @@ export function Composer({ conversationId, windowOpen, contact }: {
             role="tab"
             aria-selected={mode === m}
             onClick={() => setMode(m)}
-            className={`min-h-11 rounded-md px-3 ${mode === m ? 'bg-honey font-semibold text-ink' : 'text-muted'}`}
+            className={`min-h-11 rounded-md px-3 ${mode === m ? 'bg-honey font-semibold text-on-honey' : 'text-muted'}`}
           >
             {m === 'message' ? 'Mensaje al cliente' : 'Nota interna'}
           </button>

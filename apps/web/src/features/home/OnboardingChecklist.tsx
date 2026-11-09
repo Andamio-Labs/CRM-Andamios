@@ -41,7 +41,7 @@ export function OnboardingChecklist() {
         {o.steps.map((s, index) => {
           const content = (
             <>
-              <span aria-hidden className={`grid size-5 shrink-0 place-items-center rounded-full text-[10px] ${s.done ? 'bg-honey font-semibold text-ink' : 'border border-line text-muted'}`}>{s.done ? '✓' : index + 1}</span>
+              <span aria-hidden className={`grid size-5 shrink-0 place-items-center rounded-full text-[10px] ${s.done ? 'bg-honey font-semibold text-on-honey' : 'border border-line text-muted'}`}>{s.done ? '✓' : index + 1}</span>
               <span className={`text-xs font-medium ${s.done ? 'text-muted line-through' : 'text-ink'}`}>{s.label}</span>
               <span className="sr-only">{s.done ? '(hecho)' : '(pendiente)'}</span>
               {!s.done && <span aria-hidden className="ml-auto text-muted">›</span>}

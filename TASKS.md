@@ -10,12 +10,12 @@ Leyenda: `[x]` hecha · `[~]` parcial (ver nota) · `[ ]` pendiente · ⏸ difer
 | Fase | Hechas | Puntos hechos |
 |---|---|---|
 | MVP | 55 / 65 (+10 parciales) | 305 / 386 |
-| Fase-2 | 1 / 41 | 3 / 298 |
-| Fase-3 | 1 / 21 (+1 parcial) | 3 / 264 |
-| **Total** | **57 / 127** | **311 / 948** |
+| Fase-2 | 5 / 41 | 26 / 298 |
+| Fase-3 | 2 / 21 (+1 parcial) | 11 / 264 |
+| **Total** | **62 / 127** | **342 / 948** |
 <!-- /progreso -->
 
-Última actualización: 2026-10-08 · Tests: 559 API + 55 web, todos en verde. Sprints 0 a 8 cerrados salvo lo que depende de algo externo: proveedor de IA real (E05-S03 latencia), Wompi sandbox (E10-S03), Meta (E04-S01), abogado (E13-S01) y despliegue (E15).
+Última actualización: 2026-11-09 · Tests: 647 API + 94 web, todos en verde. Sprints 0 a 8 cerrados salvo lo que depende de algo externo: proveedor de IA real (E05-S03 latencia), Wompi sandbox (E10-S03), Meta (E04-S01), abogado (E13-S01) y despliegue (E15). Adelantadas de Fase-2/3 (inspiradas en la referencia): búsqueda tolerante, pool de leads, robots por etapa, resumen IA del negocio, mis tareas y calendario, y chat interno.
 
 ## Decisiones que modifican el backlog
 
@@ -205,7 +205,8 @@ Leyenda: `[x]` hecha · `[~]` parcial (ver nota) · `[ ]` pendiente · ⏸ difer
 - [ ] **E04-S13** (13p) Instagram Direct — _Mensajes de cuenta de empresa llegan como conversaciones; se responde desde la bandeja; maneja ventana de mensajería._
 - [ ] **E04-S14** (8p) Facebook Messenger — _Mismas capacidades que Instagram Direct para páginas de Facebook._
 - [ ] **E04-S15** (13p) Correo electrónico en la tarjeta — _Conexión OAuth con Gmail y Microsoft 365; los correos se asocian al contacto; se responde desde el CRM._
-- [ ] **E02-S10** (5p) Búsqueda tolerante a errores — _Encuentra clientes con errores de escritura y por los últimos dígitos del teléfono (pg_trgm)._
+- [x] **E02-S10** (5p) Búsqueda tolerante a errores — _Encuentra clientes con errores de escritura y por los últimos dígitos del teléfono (pg_trgm)._
+  - ✔ (2026-11-09) Búsqueda global con `pg_trgm` (similitud de palabras) solo cuando nada coincide exacto; teléfonos por dígitos (con indicativo, espacios o paréntesis). Tests en `contact-search.spec.ts`.
 - [ ] **E03-S05** (5p) Campos obligatorios por etapa — _No permite avanzar si faltan campos requeridos; el mensaje indica cuáles._
 - [x] **E03-S06** (3p) Plantillas de embudo por sector — _Plantillas para clínica, inmobiliaria, educación, comercio y servicios; se aplican en el onboarding._
   - ✔ Adelantada con el onboarding (E14-S03): plantillas general, clínica, inmobiliaria, educación, comercio y servicios; con el embudo inicial vacío lo transforma, si no crea uno nuevo.
@@ -223,16 +224,19 @@ Leyenda: `[x]` hecha · `[~]` parcial (ver nota) · `[ ]` pendiente · ⏸ difer
 
 - [ ] **E07-S02** (13p) Motor de reglas (disparador, condición, acción) — _Ejecución idempotente con reintentos y cola de errores; límite de ejecuciones por plan._
 - [ ] **E07-S03** (21p) Constructor visual de escenarios — _Lienzo para armar reglas sin código, con pruebas en modo simulación._
-- [ ] **E07-S04** (8p) Robots por etapa — _Acciones cuando un negocio lleva X días estancado, el cliente no responde o se gana el negocio._
+- [x] **E07-S04** (8p) Robots por etapa — _Acciones cuando un negocio lleva X días estancado, el cliente no responde o se gana el negocio._
+  - ✔ (2026-11-09) Robots por etapa y "al ganar": disparadores al entrar, estancado X días, cliente sin responder X horas y ganado; acciones avisar, crear tarea, asignar y mover de etapa; condición de valor mínimo; cada robot actúa una sola vez por ocasión y deja registro. Panel en "Configurar embudo". Tests en `robots.spec.ts` y `robot-text.test.ts`.
 - [ ] **E07-S05** (5p) Webhook saliente como acción — _Una regla puede llamar a una URL externa con carga útil configurable y firma._
 
 ## Sprint 14 — Fase-2 · 49 pts
 
 - [ ] **E05-S09** (8p) Transcripción de notas de voz — _Las notas de voz se transcriben y el agente puede responder sobre su contenido; se muestra la transcripción._
-- [ ] **E05-S10** (5p) Resumen de conversación y próximo paso — _Un clic genera resumen, temperatura del lead y acción sugerida; se guarda como nota._
+- [x] **E05-S10** (5p) Resumen de conversación y próximo paso — _Un clic genera resumen, temperatura del lead y acción sugerida; se guarda como nota._
+  - ✔ (2026-11-09) Pestaña IA en la ficha del negocio: resumen, temperatura, próximo paso y respuesta sugerida; se guarda como nota interna en la conversación y se registra el costo. Tests en `ai-insights.spec.ts` e `insights.spec.ts`.
 - [ ] **E05-S11** (8p) Agendamiento de citas por el agente — _El agente propone horarios libres y crea la cita en el calendario conectado._
 - [ ] **E05-S12** (5p) Evaluaciones automáticas (evals) — _Conjunto de conversaciones de prueba en CI que detecta regresiones de calidad al cambiar prompts o modelo._
-- [ ] **E06-S04** (5p) Vista "mis tareas" y calendario — _Lista de hoy, atrasadas y próximas; vista de calendario semanal._
+- [x] **E06-S04** (5p) Vista "mis tareas" y calendario — _Lista de hoy, atrasadas y próximas; vista de calendario semanal._
+  - ✔ (2026-11-09) Tareas con tres vistas: Mis tareas (atrasadas, hoy, próximas, sin fecha), Todas (filtros) y Calendario semanal con tareas y reuniones en la zona de la empresa. El formulario elige responsable (por defecto, quien la crea). API `GET /tasks?from&to`. Tests en `tasks.spec.ts` y `task-dates.test.ts`.
 - [ ] **E06-S05** (8p) Sincronización con Google Calendar — _Sincronización bidireccional de tareas y citas con el calendario del usuario._
 - [ ] **E08-S05** (5p) Porcentaje atendido por IA y costo — _Proporción de conversaciones resueltas por IA, costo por conversación y ahorro estimado._
 - [ ] **E08-S06** (5p) Reportes exportables y programados — _Exportación a CSV/PDF y envío periódico por correo._
@@ -275,14 +279,16 @@ Leyenda: `[x]` hecha · `[~]` parcial (ver nota) · `[ ]` pendiente · ⏸ difer
 - [ ] **E11-S05** (13p) Migración desde Kommo, Bitrix24, HubSpot y Zoho — _Asistente de migración de negocios, contactos, comentarios y actividades vía API._
 - [ ] **E11-S06** (5p) Integración con Google Sheets — _Exportar o sincronizar contactos y negocios con una hoja._
 - [ ] **E08-S07** (13p) Dashboards personalizables — _Widgets configurables por usuario._
-- [ ] **E03-S08** (8p) Pool compartido de leads — _El primer vendedor que toma el lead se queda con él; el resto deja de verlo._
+- [x] **E03-S08** (8p) Pool compartido de leads — _El primer vendedor que toma el lead se queda con él; el resto deja de verlo._
+  - ✔ (2026-11-09) Con el pool activo (Configuración → General) el lead entra sin dueño, se avisa a los vendedores y el primero que lo toma ("Tomar") se queda con negocio, cliente y conversación; la toma es atómica. Tests en `lead-pool.spec.ts`.
 
 ## Sprint 20 — Fase-3 · 47 pts
 
 - [ ] **E05-S13** (13p) Asistente interno en lenguaje natural — _Consultas del equipo sobre sus datos con permisos por rol; toda acción exige confirmación explícita._
 - [~] **E12-S03** (21p) Chat interno y reuniones — _Mensajería y videollamadas dentro del CRM con el negocio adjunto._
   - ✅ Reuniones (2026-10-08): nueva al instante, unirse por enlace, programar con equipo e invitados por correo, negocio adjunto, calendario, acta y enlace de la grabación. Sala Jitsi (`MEETINGS_URL`) o enlace propio. Tests en `meetings.spec.ts` y `meeting-dates.test.ts`.
-  - ⏸ Chat interno del equipo. Videollamada embebida y grabación en el servidor (necesitan Jitsi propio o JaaS).
+  - ✅ Chat interno (2026-11-09): chat general de la empresa, notas personales, directos y grupos con negocio adjunto; no leídos en vivo, borrar durante la primera hora y botón "Reunión" que comparte el enlace en el chat. Tests en `team-chat.spec.ts` y `chat-format.test.ts`.
+  - ⏸ Videollamada embebida y grabación en el servidor (necesitan Jitsi propio o JaaS).
 - [ ] **E09-S07** (13p) Widget de chat web — _Chat embebible que crea conversaciones en la bandeja._
 
 ## Sprint 21 — Fase-3 · 42 pts

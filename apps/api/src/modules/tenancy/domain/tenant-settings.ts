@@ -52,6 +52,7 @@ export const updateTenantSettingsSchema = z
     outOfHoursEnabled: z.boolean(),
     outOfHoursMessage: z.string().trim().min(1).max(1000),
     firstResponseSlaMinutes: z.number().int().min(5).max(1440),
+    leadPool: z.boolean(),
   })
   .partial()
   .strict();

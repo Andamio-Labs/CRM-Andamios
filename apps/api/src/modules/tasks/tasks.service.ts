@@ -1,5 +1,5 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, asc, eq, gt, isNotNull, isNull, lt, or, type SQL, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, gte, isNotNull, isNull, lt, or, type SQL, sql } from 'drizzle-orm';
 import type pg from 'pg';
 import { z } from 'zod';
 import type { Database, Transaction } from '../../shared/database/database.js';
@@ -28,6 +28,9 @@ export const listTasksSchema = z.object({
   assignment: z.enum(['all', 'mine', 'unassigned']).default('all'),
   dealId: z.uuid().optional(),
   contactId: z.uuid().optional(),
+  /** E06-S04 — Calendario: tareas que vencen en [from, to). */
+  from: z.iso.datetime({ offset: true }).optional(),
+  to: z.iso.datetime({ offset: true }).optional(),
 });
 
 type TaskRow = typeof tasks.$inferSelect;
@@ -54,7 +57,8 @@ export class TasksService {
       const byAssignment: Record<string, SQL | undefined> = { all: undefined, mine: eq(tasks.assigneeId, auth.userId), unassigned: isNull(tasks.assigneeId) };
       const rows = await this.scoped(tx)
         .where(and(await this.visible(tx, auth), byStatus[query.status], byAssignment[query.assignment],
-          query.dealId ? eq(tasks.dealId, query.dealId) : undefined, query.contactId ? eq(tasks.contactId, query.contactId) : undefined))
+          query.dealId ? eq(tasks.dealId, query.dealId) : undefined, query.contactId ? eq(tasks.contactId, query.contactId) : undefined,
+          query.from ? gte(tasks.dueAt, new Date(query.from)) : undefined, query.to ? lt(tasks.dueAt, new Date(query.to)) : undefined))
         .orderBy(sql`${tasks.dueAt} ASC NULLS LAST`, asc(tasks.createdAt)).limit(200);
       return rows.map(({ task, dealTitle, contactName }) => ({ ...view(task), dealTitle, contactName }));
     });

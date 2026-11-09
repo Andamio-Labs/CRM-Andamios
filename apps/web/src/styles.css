@@ -6,6 +6,8 @@
   --color-honey-soft: #fdf3d0;
   /* Texto sobre miel sólido: oscuro en los dos temas. */
   --color-on-honey: #1f2933;
+  /* Fondo detrás de diálogos y paneles: oscuro en los dos temas (con `ink`, en oscuro quedaba blanco). */
+  --color-scrim: #08090c;
   /* Naranja del degradado del CTA "Crear empresa" y del ícono de tienda. */
   --color-honey-deep: #f08c00;
   /* Miel como texto: oscurecida en claro para que se lea sobre blanco. */

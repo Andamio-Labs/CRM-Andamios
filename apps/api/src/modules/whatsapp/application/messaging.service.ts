@@ -300,10 +300,12 @@ export class MessagingService {
 /**
  * Visibilidad en la bandeja: con "solo lo asignado", el vendedor ve las conversaciones de sus
  * contactos Y las que le asignaron (aunque el contacto sea de otro).
+ * E03-S08 — Con el pool de leads activo, también las de clientes sin dueño ni asignación.
  */
 async function visibleConversations(tenant: TenantContext, tx: Transaction, auth: AuthContext) {
   if ((await tenant.visibility(tx, auth)) !== 'assigned') return undefined;
-  return or(eq(contacts.ownerId, auth.userId), eq(conversations.assignedTo, auth.userId));
+  const pool = (await tenant.settings(tx)).leadPool ? and(isNull(contacts.ownerId), isNull(conversations.assignedTo)) : undefined;
+  return or(eq(contacts.ownerId, auth.userId), eq(conversations.assignedTo, auth.userId), pool);
 }
 
 function withWindow<T extends { lastInboundAt: Date | null }>(conversation: T) {

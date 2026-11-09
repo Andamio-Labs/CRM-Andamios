@@ -5,6 +5,8 @@
 export const NOTIFICATION_TYPES = {
   task_reminder: { label: 'Recordatorios', description: 'Tus tareas y seguimientos por vencer', emailLocked: false, important: false },
   meeting_invite: { label: 'Reuniones', description: 'Te invitaron a una reunión o se canceló una', emailLocked: false, important: false },
+  lead_pool: { label: 'Leads nuevos en el pool', description: 'Llegó un lead sin dueño: el primero que lo toma se queda con él', emailLocked: false, important: true },
+  robot: { label: 'Robots del embudo', description: 'Avisos de los robots por etapa: negocios estancados, clientes sin respuesta', emailLocked: false, important: false },
   no_reply: { label: 'Clientes esperando respuesta', description: 'Conversaciones sin contestar hace varias horas', emailLocked: false, important: false },
   sla_breach: { label: 'Primera respuesta fuera de tiempo', description: 'Conversaciones que superaron el tiempo de respuesta (SLA)', emailLocked: false, important: true },
   deal_won: { label: 'Negocios ganados', description: 'Cuando alguien del equipo cierra un negocio', emailLocked: false, important: false },

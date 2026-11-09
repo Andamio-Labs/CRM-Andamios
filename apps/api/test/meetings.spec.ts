@@ -47,6 +47,8 @@ describe('Reuniones (E12-S03)', () => {
     expect(await ids(team.admin.api)).not.toContain(meeting.id);
     expect((await team.seller.api.get(`/api/v1/meetings/${meeting.id}`).expect(200)).body.title).toBe('Demo con el cliente');
     await team.admin.api.get(`/api/v1/meetings/${meeting.id}`).expect(404);
+    // Ficha del negocio: sus reuniones, próximas y pasadas.
+    expect(await ids(team.owner.api, `?scope=all&dealId=${dealId}`)).toEqual([meeting.id]);
     await team.admin.api.get('/api/v1/meetings/no-es-un-id').expect(404);
     expect((await team.seller.api.get('/api/v1/meetings').expect(200)).body.find((m: Meeting) => m.id === meeting.id).canManage).toBe(false);
   });

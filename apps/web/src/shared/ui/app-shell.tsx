@@ -1,17 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
-import type { ReactNode } from 'react';
+import type { ComponentType, ReactNode } from 'react';
+import { useTeamChatUnread } from '../../features/chat/chat-api';
 import { api } from '../api';
 import { authClient } from '../auth-client';
 import { initials } from '../initials';
 import { useRegion } from '../i18n/use-region';
 import type { MessageKey } from '../i18n/messages';
 import { useTheme } from '../use-theme';
+import { ChartIcon, ChatIcon, ChevronRightIcon, HomeIcon, InboxIcon, KanbanIcon, LogoutIcon, MoonIcon, SettingsIcon, SunIcon, TasksIcon, TeamIcon, UsersIcon, VideoIcon } from './icons';
 import { NotificationsBell } from './notifications-bell';
 import { ProfileMenu } from './profile-menu';
 import { AccountBanner, CommandPalette } from './shell-widgets';
 
-type NavTo = '/' | '/tasks' | '/meetings' | '/reports' | '/deals' | '/inbox' | '/contacts' | '/team' | '/settings';
+type NavTo = '/' | '/tasks' | '/meetings' | '/reports' | '/deals' | '/inbox' | '/contacts' | '/team-chat' | '/team' | '/settings';
 
 const MAIN_NAV: { to: NavTo; label: MessageKey }[] = [
   { to: '/', label: 'nav.home' },
@@ -24,26 +26,28 @@ const MAIN_NAV: { to: NavTo; label: MessageKey }[] = [
 ];
 
 const TEAM_NAV: { to: NavTo; label: MessageKey }[] = [
+  { to: '/team-chat', label: 'nav.teamChat' },
   { to: '/team', label: 'nav.team' },
   { to: '/settings', label: 'nav.settings' },
 ];
 
-const NAV_ICONS: Record<NavTo, string> = {
-  '/': '⌂',
-  '/deals': '▣',
-  '/inbox': '▤',
-  '/contacts': '♙',
-  '/tasks': '☑',
-  '/meetings': '◉',
-  '/reports': '▥',
-  '/team': '♧',
-  '/settings': '⚙',
+const NAV_ICONS: Record<NavTo, ComponentType<{ size?: number }>> = {
+  '/': HomeIcon,
+  '/deals': KanbanIcon,
+  '/inbox': InboxIcon,
+  '/contacts': UsersIcon,
+  '/tasks': TasksIcon,
+  '/meetings': VideoIcon,
+  '/reports': ChartIcon,
+  '/team-chat': ChatIcon,
+  '/team': TeamIcon,
+  '/settings': SettingsIcon,
 };
 
 function Logo() {
   return (
     <div className="flex items-center gap-2 font-bold tracking-tight text-ink">
-      <span className="grid size-7 place-items-center rounded-md bg-honey text-sm text-ink"><span className="bee-mark" aria-hidden="true"><span /><span /></span></span>
+      <span className="grid size-7 place-items-center rounded-md bg-honey text-sm text-on-honey"><span className="bee-mark" aria-hidden="true"><span /><span /></span></span>
       <span>BeeCRM</span>
     </div>
   );
@@ -65,11 +69,10 @@ export function AppShell({ title, subtitle, wide, hideHeading, children }: { tit
   return (
     <div className="min-h-dvh bg-canvas md:flex">
       <aside className="sticky top-0 hidden h-dvh w-[12rem] shrink-0 flex-col border-r border-line bg-surface md:flex">
-        <div className="flex h-12 items-center justify-between border-b border-line px-3"><Logo /><span className="text-xs text-muted">⌄</span></div>
+        <div className="flex h-12 items-center border-b border-line px-3"><Logo /></div>
         <div className="border-b border-line px-2 py-2"><CompanySwitcher /></div>
-        <div className="flex gap-1 border-b border-line p-2">
-          <CommandPalette label="Buscar secciones..." />
-          <span aria-hidden className="grid min-h-9 min-w-9 place-items-center rounded-md border border-line text-xs text-muted">▦</span>
+        <div className="border-b border-line p-2">
+          <CommandPalette label="Buscar" variant="sidebar" shortcut />
         </div>
         <nav aria-label="Principal" className="flex flex-col gap-0.5 px-2 py-2">
           <NavItems items={MAIN_NAV} t={t} />
@@ -79,7 +82,8 @@ export function AppShell({ title, subtitle, wide, hideHeading, children }: { tit
           <NavItems items={TEAM_NAV} t={t} />
         </nav>
         <div className="mt-auto border-t border-line p-2">
-          <button onClick={signOut} className="flex min-h-11 w-full items-center rounded-lg px-3 text-sm text-muted hover:bg-canvas hover:text-danger">
+          <button onClick={signOut} className="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-xs text-muted hover:bg-canvas hover:text-danger">
+            <LogoutIcon size={15} />
             {t('nav.signOut')}
           </button>
         </div>
@@ -89,12 +93,11 @@ export function AppShell({ title, subtitle, wide, hideHeading, children }: { tit
         <header className="sticky top-0 z-10 border-b border-line bg-surface/95 backdrop-blur">
           <div className="flex h-10 items-center gap-2 px-3 text-xs">
             <div className="md:hidden"><Logo /></div>
-            <span className="hidden text-muted md:inline">☰</span>
-            <span className="hidden text-muted md:inline">⌂ Inicio</span>
-            <span className="hidden text-muted md:inline">›</span>
+            <Link to="/" className="hidden items-center gap-1 text-muted hover:text-ink md:inline-flex"><HomeIcon size={14} /> Inicio</Link>
+            <ChevronRightIcon size={12} className="hidden text-muted md:block" />
             <span className="hidden font-medium text-ink md:inline">{title}</span>
             <div className="ml-auto flex items-center gap-1">
-              <CommandPalette />
+              <div className="md:hidden"><CommandPalette /></div>
               <div className="md:hidden"><NotificationsBell /></div>
               <button
                 type="button"
@@ -103,7 +106,7 @@ export function AppShell({ title, subtitle, wide, hideHeading, children }: { tit
                 title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
                 className="grid min-h-10 min-w-10 place-items-center rounded-lg border border-line text-base text-muted transition hover:bg-raised hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-honey"
               >
-                <span aria-hidden>{theme === 'dark' ? '☀' : '☾'}</span>
+                {theme === 'dark' ? <SunIcon size={16} /> : <MoonIcon size={16} />}
               </button>
               {/* En desktop el avatar con tu estado vive en el rail derecho. */}
               <div className="md:hidden"><ProfileMenu onSignOut={signOut} /></div>
@@ -168,20 +171,26 @@ function RightRail({ onSignOut }: { onSignOut: () => void }) {
 }
 
 function NavItems({ items, t }: { items: { to: NavTo; label: MessageKey }[]; t: (key: MessageKey) => string }) {
+  const unreadChat = useTeamChatUnread();
   return (
     <>
-      {items.map((item) => (
-        <Link
-          key={item.to}
-          to={item.to}
-          className="flex min-h-9 items-center gap-2 rounded-lg px-3 text-xs text-muted hover:bg-canvas hover:text-ink"
-          activeProps={{ className: 'bg-honey-soft font-semibold text-ink' }}
-          activeOptions={{ exact: item.to === '/' }}
-        >
-          <span className="w-4 text-center text-sm">{NAV_ICONS[item.to]}</span>
-          <span>{t(item.label)}</span>
-        </Link>
-      ))}
+      {items.map((item) => {
+        const Icon = NAV_ICONS[item.to];
+        const badge = item.to === '/team-chat' ? unreadChat : 0;
+        return (
+          <Link
+            key={item.to}
+            to={item.to}
+            className="flex min-h-9 items-center gap-2.5 rounded-lg px-3 text-xs text-muted transition hover:bg-canvas hover:text-ink"
+            activeProps={{ className: 'bg-honey-soft font-semibold text-ink' }}
+            activeOptions={{ exact: item.to === '/' }}
+          >
+            <Icon size={16} />
+            <span className="flex-1">{t(item.label)}</span>
+            {badge > 0 && <span className="rounded-full bg-honey px-1.5 text-[10px] font-bold text-on-honey" aria-label={`${badge} sin leer`}>{badge > 99 ? '99+' : badge}</span>}
+          </Link>
+        );
+      })}
     </>
   );
 }

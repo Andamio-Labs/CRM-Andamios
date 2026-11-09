@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { and, asc, eq, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { companies, contacts, deals, savedViews } from '../../../shared/database/schema.js';
 import { badRequest } from '../../../shared/http/errors.js';
@@ -53,9 +53,14 @@ export class ViewsService {
 
 export const searchSchema = z.object({ q: z.string().trim().min(2).max(100) });
 
+/** Con menos letras, la similitud por trigramas encuentra de todo: la tolerancia a errores no aplica. */
+const FUZZY_MIN_LENGTH = 4;
+
 /**
  * E02-S07 — Búsqueda global sin tildes ni mayúsculas. Cada palabra es un LIKE sobre la
  * columna `search` (índice trigram); todas deben aparecer. Respeta la visibilidad del vendedor.
+ * E02-S10 — Un teléfono escrito con guiones o paréntesis se busca por sus dígitos y, si nada coincide
+ * exacto, se toleran errores de escritura ("Gomes" encuentra a Gómez) con similitud por palabra (pg_trgm).
  */
 @Injectable()
 export class SearchService {
@@ -64,20 +69,34 @@ export class SearchService {
   search(auth: AuthContext, q: string) {
     const terms = q.split(/\s+/).filter(Boolean).slice(0, 5);
     if (!terms.length) throw badRequest('Búsqueda vacía');
-    const like = (column: Parameters<typeof sql>[1]) =>
+    const text = q.trim();
+    const digits = text.replace(/\D/g, '');
+    type Column = Parameters<typeof sql>[1];
+    const like = (column: Column) =>
       and(...terms.map((t) => sql`${column} LIKE '%' || lower(f_unaccent(${escapeLike(t)})) || '%'`));
+    const exact = (column: Column) =>
+      or(like(column), digits.length >= 4 && digits !== text ? sql`${column} LIKE '%' || ${digits} || '%'` : undefined);
+    const typo = (column: Column) => sql`lower(f_unaccent(${text})) <% ${column}`;
+    const closeness = (column: Column) => desc(sql`word_similarity(lower(f_unaccent(${text})), ${column})`);
+    const dealTitle = sql`lower(f_unaccent(${deals.title}))`;
 
     return this.tenant.run(auth, async (tx) => {
       const visibleContacts = await this.tenant.visibilityFilter(tx, auth, contacts.ownerId);
       const visibleDeals = await this.tenant.visibilityFilter(tx, auth, deals.ownerId);
-      const [foundContacts, foundCompanies, foundDeals] = await Promise.all([
+      const find = (fuzzy: boolean) => Promise.all([
         tx.select({ id: contacts.id, name: contacts.name, phone: contacts.phone, email: contacts.email })
-          .from(contacts).where(and(like(contacts.search), visibleContacts)).orderBy(asc(contacts.name)).limit(10),
+          .from(contacts).where(and(fuzzy ? typo(contacts.search) : exact(contacts.search), visibleContacts))
+          .orderBy(fuzzy ? closeness(contacts.search) : asc(contacts.name)).limit(10),
         tx.select({ id: companies.id, name: companies.name })
-          .from(companies).where(like(companies.search)).orderBy(asc(companies.name)).limit(5),
+          .from(companies).where(fuzzy ? typo(companies.search) : like(companies.search))
+          .orderBy(fuzzy ? closeness(companies.search) : asc(companies.name)).limit(5),
         tx.select({ id: deals.id, title: deals.title, status: deals.status })
-          .from(deals).where(and(like(sql`lower(f_unaccent(${deals.title}))`), visibleDeals)).limit(5),
+          .from(deals).where(and(fuzzy ? typo(dealTitle) : like(dealTitle), visibleDeals))
+          .orderBy(fuzzy ? closeness(dealTitle) : asc(deals.title)).limit(5),
       ]);
+      let [foundContacts, foundCompanies, foundDeals] = await find(false);
+      const nothing = !foundContacts.length && !foundCompanies.length && !foundDeals.length;
+      if (nothing && text.length >= FUZZY_MIN_LENGTH) [foundContacts, foundCompanies, foundDeals] = await find(true);
       return { contacts: foundContacts, companies: foundCompanies, deals: foundDeals };
     });
   }

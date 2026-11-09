@@ -1,4 +1,4 @@
-# Brechas: CRM de referencia vs BeeCRM (2026-10-06)
+# Brechas: CRM de referencia vs BeeCRM (2026-10-06, revisado 2026-11-09)
 
 Fuente: `docs/FUNCIONALIDADES-REFERENCIA.md` (relevamiento por capturas). Comparado contra el **código actual**,
 no contra la sección "Brechas" de ese documento, que quedó desactualizada (no refleja Sprints 2 a 4).
@@ -32,8 +32,11 @@ Leyenda: ✅ ya está · 🔧 se corrige en este ciclo · ➕ se agrega en este 
 | "+ Nuevo negocio" por columna | ➕ | |
 | Crear, renombrar y borrar columnas desde la UI ("Funnel settings") | 🔧 | La API existe (E03-S01); faltaba la UI |
 | Vista Lista del mismo embudo | ➕ | |
-| Vista Calendario | 📅 | Con tareas (E06-S04, Fase 2) |
-| Barra de color por urgencia/SLA en la tarjeta | 📅 | E08-S02 (SLA) |
+| Vista Calendario | ✅ | Semana con tareas y reuniones en Tareas → Calendario (E06-S04, adelantada 2026-11-09) |
+| Barra de color por urgencia/SLA en la tarjeta | 📅 | E08-S02 (SLA). Mientras tanto la tarjeta marca los días que lleva en la etapa (desde 3) |
+| Ficha del negocio a un clic (resumen, tareas, reuniones, historial, IA) | ✅ | Panel lateral con enlace propio (`/deals?deal=…&tab=…`), mover de etapa, ganar/perder y chat del negocio (2026-11-09) |
+| Pool compartido de leads ("Tomar") | ✅ | E03-S08 adelantada |
+| Robots por etapa | ✅ | E07-S04 adelantada: al entrar, estancado, sin respuesta y al ganar |
 
 ## Dashboard (pantallas 1 a 3)
 
@@ -45,7 +48,7 @@ Leyenda: ✅ ya está · 🔧 se corrige en este ciclo · ➕ se agrega en este 
 | Estado vacío diseñado en cada bloque | ✅/🔧 | Patrón ya aplicado (auditoría #15); se mantiene en lo nuevo |
 | Banner "conecta un canal" | ➕ | Si no hay número conectado |
 | Checklist de primer día que se tacha solo | 📅 | Sprint 8: E14-S03 |
-| Analítica con rangos | 📅 | Sprint 7: E08-S01..S03 |
+| Analítica con rangos | ✅ | El inicio muestra cifras reales del periodo (7, 14, 30 o 90 días): valor del embudo, ganados, tasa de cierre, leads nuevos y embudo por etapa |
 | Accesos rápidos configurables | ⏭ | Diseño de navegación: se define con los diseños |
 
 ## Tareas y recordatorios (pantallas 6, 7 y 17)
@@ -54,7 +57,8 @@ Leyenda: ✅ ya está · 🔧 se corrige en este ciclo · ➕ se agrega en este 
 |---|---|---|
 | Tarea vinculada a negocio o contacto, con responsable y vencimiento | ➕ | Sprint 5: E06-S01. La referencia exige negocio; el backlog acepta contacto o negocio: **se exige al menos uno** |
 | Filtros abiertas / vencidas / hechas y todas / mías / sin asignar | ➕ | |
-| Agrupadas por semana | ➕ | En la UI |
+| Agrupadas por semana | ✅ | Vista "Todas" |
+| Mis tareas: atrasadas, hoy, próximas | ✅ | E06-S04 adelantada (2026-11-09) |
 | Recordatorio in-app y por correo con anticipación elegible | ➕ | Sprint 5: E06-S02 |
 | Plantillas rápidas: "en una hora", "mañana", "en una semana" | ➕ | Atajos de vencimiento en la UI |
 | Integración con tablero externo (BeeBoard) | ⏭ | Ecosistema propio de la referencia |
@@ -63,7 +67,7 @@ Leyenda: ✅ ya está · 🔧 se corrige en este ciclo · ➕ se agrega en este 
 
 | Funcionalidad | Estado | Dónde / nota |
 |---|---|---|
-| Búsqueda global Ctrl+K | 🔧 | La API existe (E02-S07); falta la paleta en la UI |
+| Búsqueda global Ctrl+K | ✅ | Paleta en la barra lateral (⌘K / Ctrl+K), tolerante a errores (E02-S10) |
 | Notificaciones (campana) | ➕ | Base con E06-S02; preferencias en Sprint 8 (E14-S04) |
 | Presencia del usuario (punto verde) | ➕ | E01-S09 adelantada: menú del avatar con en línea, en visita, no molestar y desconectado (1 hora, fin del día o hasta cambiarlo). La asignación automática omite a quien no está disponible |
 | Multiempresa / selector de workspace | 📅 | E01-S10 (Fase 3) |
@@ -76,7 +80,8 @@ Leyenda: ✅ ya está · 🔧 se corrige en este ciclo · ➕ se agrega en este 
 | Reuniones online con grabación | ➕ | E12-S03 (parte de reuniones) adelantada: nueva, unirse, programar con equipo e invitados, calendario, acta y enlace de la grabación. Sala Jitsi por defecto; grabar en el servidor queda fuera |
 | Llamadas con PBX, log y análisis | ⏭ | E12-S01, E12-S02 |
 | Agente de IA que llama | ⏭ | Sin story (E05 a futuro) |
-| Chat interno del equipo con notas privadas | ⏭ | E12-S03 |
+| Chat interno del equipo con notas privadas | ✅ | E12-S03 (parte de chat) adelantada: general, notas personales, directos y grupos con negocio adjunto |
+| Resumen del cliente con IA y próximo paso | ✅ | E05-S10 adelantada: pestaña IA de la ficha del negocio |
 | Centro de integraciones y migración desde amoCRM/Bitrix | ⏭ | E11-S05 |
 | Meta Ads y formularios de Meta | ⏭ | E09-S03, E09-S05 |
 | Formulario web que cae al embudo | ⏭ | E09-S02 |

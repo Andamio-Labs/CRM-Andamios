@@ -3,7 +3,8 @@ import { Global, Injectable, Logger, Module } from '@nestjs/common';
 /** Eventos de negocio que otros módulos (automatización, analítica) escuchan sin acoplarse. */
 export type DomainEvent =
   | { type: 'lead.created'; tenantId: string; contactId: string; dealId: string | null; conversationId: string | null }
-  | { type: 'deal.stage_changed'; tenantId: string; dealId: string; stageId: string; actorId: string | null }
+  // byRobot: lo movió un robot por etapa (E07-S04); los robots no reaccionan a eso, así no se encadenan sin fin.
+  | { type: 'deal.stage_changed'; tenantId: string; dealId: string; stageId: string; actorId: string | null; byRobot?: boolean }
   | { type: 'deal.won'; tenantId: string; dealId: string; actorId: string | null };
 
 type Handler<T extends DomainEvent['type']> = (event: Extract<DomainEvent, { type: T }>) => Promise<void>;
