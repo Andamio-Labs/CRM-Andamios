@@ -43,3 +43,26 @@ export function groupByWeek<T extends Dated>(items: T[], now: Date, timeZone: st
   }
   return groups.filter((g) => g.items.length);
 }
+
+/** E06-S04 — "Mis tareas": atrasadas, hoy, próximas y sin fecha, en la zona de la empresa. Solo abiertas. */
+export function groupMyTasks<T extends Dated>(items: T[], now: Date, timeZone: string) {
+  const tomorrow = startOfDay(now, timeZone, 1);
+  const groups = { overdue: [] as T[], today: [] as T[], upcoming: [] as T[], someday: [] as T[] };
+  for (const item of items) {
+    if (item.status !== 'open') continue;
+    const due = item.dueAt ? new Date(item.dueAt) : null;
+    if (!due) groups.someday.push(item);
+    else if (due < now) groups.overdue.push(item);
+    else if (due < tomorrow) groups.today.push(item);
+    else groups.upcoming.push(item);
+  }
+  return groups;
+}
+
+/** E06-S04 — Semana del calendario: lunes 00:00 en la zona de la empresa, corrida `weeks` semanas, y sus 7 días. */
+export function weekOf(at: Date, timeZone: string, weeks = 0) {
+  const today = startOfDay(at, timeZone);
+  const weekday = (new Date(today.getTime() + offsetMs(today, timeZone)).getUTCDay() + 6) % 7;
+  const monday = startOfDay(today, timeZone, weeks * 7 - weekday);
+  return { start: monday, end: startOfDay(monday, timeZone, 7), days: Array.from({ length: 7 }, (_, i) => startOfDay(monday, timeZone, i)) };
+}
