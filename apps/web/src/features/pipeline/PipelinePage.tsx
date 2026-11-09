@@ -2,22 +2,24 @@ import {
   DndContext, type DragEndEvent, KeyboardSensor, MouseSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors,
 } from '@dnd-kit/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useSearch } from '@tanstack/react-router';
-import { type FormEvent, type SyntheticEvent, useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearch } from '@tanstack/react-router';
+import { type FormEvent, type SyntheticEvent, useState } from 'react';
 import { api, ApiError } from '../../shared/api';
 import { authClient } from '../../shared/auth-client';
 import { useRegion } from '../../shared/i18n/use-region';
 import { useRealtime } from '../../shared/realtime';
 import { AppShell } from '../../shared/ui/app-shell';
 import { Alert, Button } from '../../shared/ui/form';
-import { Badge, type BadgeTone, secondaryButton } from '../../shared/ui/section';
+import { ClockIcon, SparklesIcon, UsersIcon } from '../../shared/ui/icons';
 import { useDebouncedValue } from '../../shared/use-debounced-value';
 import { applyRemoteDeal, type Board, type BoardDeal, moveDeal, type RemoteDeal } from './board-state';
+import { DealDrawer, type DrawerTab } from './DealDrawer';
+import { daysInStage } from './deal-format';
 import { RobotsPanel } from './RobotsPanel';
 
 interface Stage { id: string; name: string; color: string }
 interface Pipeline { id: string; name: string; stages: Stage[] }
-type Card = BoardDeal & { source: string | null; createdAt: string; ownerId: string | null; contact: { name: string; phone: string | null } | null; owner: { name: string } | null; stage?: { name: string } };
+type Card = BoardDeal & { source: string | null; createdAt: string; stageEnteredAt: string; ownerId: string | null; contact: { name: string; phone: string | null } | null; owner: { name: string } | null; stage?: { name: string } };
 type CardBoard = { stages: (Omit<Board['stages'][number], 'deals'> & { deals: Card[] })[] };
 interface DealContact { id: string; name: string; phone: string | null; email?: string | null }
 interface DealMember { userId: string; name: string }
@@ -29,9 +31,11 @@ export function PipelinePage() {
   const [view, setView] = useState<'kanban' | 'list'>('kanban');
   const [q, setQ] = useState('');
   const [mine, setMine] = useState(false);
-  // E03-S08 — El aviso "nuevo lead en el pool" enlaza a /deals?pool=1.
-  const search = useSearch({ strict: false }) as { pool?: string };
+  // E03-S08 — El aviso "nuevo lead en el pool" enlaza a /deals?pool=1. ?deal=<id> abre la ficha del negocio.
+  const search = useSearch({ from: '/deals' });
+  const navigate = useNavigate();
   const [pool, setPool] = useState(search.pool === '1');
+  const openDeal = (deal: string | undefined, tab?: DrawerTab) => navigate({ to: '/deals', search: (prev) => ({ ...prev, deal, tab }) });
   const [configuring, setConfiguring] = useState(false);
   const query = useDebouncedValue(q.trim());
   const pipeline = pipelines.data?.find((p) => p.id === selected) ?? pipelines.data?.[0];
@@ -53,7 +57,7 @@ export function PipelinePage() {
             )}
             <div role="tablist" aria-label="Vista" className="flex gap-1 rounded-lg bg-canvas p-1">
               {(['kanban', 'list'] as const).map((v) => (
-                <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)} className={`min-h-9 rounded-md px-3 text-xs ${view === v ? 'bg-honey font-semibold text-ink shadow-sm' : 'text-muted'}`}>
+                <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)} className={`min-h-9 rounded-md px-3 text-xs ${view === v ? 'bg-honey font-semibold text-on-honey shadow-sm' : 'text-muted'}`}>
                   {v === 'kanban' ? 'Kanban' : 'Lista'}
                 </button>
               ))}
@@ -70,8 +74,17 @@ export function PipelinePage() {
             <button onClick={() => setConfiguring((c) => !c)} aria-expanded={configuring} className="min-h-9 rounded-lg border border-line px-3 text-xs text-ink">Configurar embudo</button>
           </div>
           {configuring && <StageSettings pipeline={pipeline} />}
-          {view === 'kanban' ? <KanbanBoard pipelineId={pipeline.id} filters={filters} poolOn={poolOn} /> : <DealList pipelineId={pipeline.id} filters={filters} />}
+          {view === 'kanban' ? <KanbanBoard pipelineId={pipeline.id} filters={filters} poolOn={poolOn} onOpen={openDeal} /> : <DealList pipelineId={pipeline.id} filters={filters} onOpen={openDeal} />}
         </>
+      )}
+      {search.deal && (
+        <DealDrawer
+          dealId={search.deal}
+          tab={(search.tab as DrawerTab | undefined) ?? 'resumen'}
+          poolOn={poolOn}
+          onTab={(tab) => void openDeal(search.deal, tab)}
+          onClose={() => void openDeal(undefined)}
+        />
       )}
     </AppShell>
   );
@@ -88,13 +101,12 @@ const keepFromDrag = {
   onKeyDown: (e: SyntheticEvent) => e.stopPropagation(),
 };
 
-function KanbanBoard({ pipelineId, filters, poolOn }: { pipelineId: string; filters: Filters; poolOn: boolean }) {
+function KanbanBoard({ pipelineId, filters, poolOn, onOpen }: { pipelineId: string; filters: Filters; poolOn: boolean; onOpen: (dealId: string, tab?: DrawerTab) => void }) {
   const queryClient = useQueryClient();
   const myId = authClient.useSession().data?.user.id;
   const key = ['board', pipelineId, filters.q, filters.mine, filters.pool];
   const board = useQuery({ queryKey: key, queryFn: () => api<CardBoard>(`/api/v1/pipelines/${pipelineId}/board?${new URLSearchParams(filterParams(filters))}`) });
   const [error, setError] = useState<string>();
-  const [insightsFor, setInsightsFor] = useState<Card>();
   // E03-S08 — Tomar un lead del pool. Si otro lo tomó antes, la API lo dice y el tablero se recarga.
   const claim = useMutation({
     mutationFn: (dealId: string) => api(`/api/v1/deals/${dealId}/claim`, { method: 'POST' }),
@@ -148,12 +160,11 @@ function KanbanBoard({ pipelineId, filters, poolOn }: { pipelineId: string; filt
               stage={stage}
               pipelineId={pipelineId}
               onCreated={() => queryClient.invalidateQueries({ queryKey: ['board', pipelineId] })}
-              card={{ myId, poolOn, onClaim: (id) => claim.mutate(id), claiming: claim.isPending ? claim.variables : undefined, onInsights: setInsightsFor }}
+              card={{ myId, poolOn, onClaim: (id) => claim.mutate(id), claiming: claim.isPending ? claim.variables : undefined, onOpen }}
             />
           ))}
         </div>
       </DndContext>
-      {insightsFor && <InsightsDialog deal={insightsFor} onClose={() => setInsightsFor(undefined)} />}
     </>
   );
 }
@@ -163,7 +174,7 @@ interface CardActions {
   poolOn: boolean;
   onClaim: (dealId: string) => void;
   claiming: string | undefined;
-  onInsights: (deal: Card) => void;
+  onOpen: (dealId: string, tab?: DrawerTab) => void;
 }
 
 function Column({ stage, pipelineId, onCreated, card }: { stage: CardBoard['stages'][number]; pipelineId: string; onCreated: () => void; card: CardActions }) {
@@ -191,7 +202,7 @@ function Column({ stage, pipelineId, onCreated, card }: { stage: CardBoard['stag
 
 /**
  * Tarjeta como en la referencia: cliente, teléfono, origen, responsable y fecha. El borde dice de quién es:
- * miel = tuyo, azul punteado = en el pool, sin color = de otra persona (E03-S08).
+ * miel = tuyo, azul punteado = en el pool, sin color = de otra persona (E03-S08). Un clic abre la ficha.
  */
 function DealCard({ deal, actions }: { deal: Card; actions: CardActions }) {
   const { attributes, listeners, setNodeRef: dragRef, transform, isDragging } = useDraggable({ id: deal.id });
@@ -199,110 +210,42 @@ function DealCard({ deal, actions }: { deal: Card; actions: CardActions }) {
   const { money, date } = useRegion();
   const inPool = !deal.ownerId;
   const ownership = deal.ownerId && deal.ownerId === actions.myId ? 'border-l-honey' : inPool && actions.poolOn ? 'border-l-info border-dashed' : 'border-l-line';
+  const stalled = daysInStage(deal.stageEnteredAt);
   return (
     <li
       ref={(node) => { dragRef(node); dropRef(node); }}
       {...attributes}
       {...listeners}
+      onClick={() => actions.onOpen(deal.id)}
       style={transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined}
-       className={`cursor-grab touch-manipulation select-none rounded-md border border-line border-l-2 ${ownership} bg-surface p-2.5 shadow-sm outline-none transition hover:border-honey/60 hover:shadow focus-visible:ring-2 focus-visible:ring-honey ${isDragging ? 'relative z-10 opacity-80 shadow-lg' : ''}`}
+      className={`cursor-pointer touch-manipulation select-none rounded-lg border border-line border-l-2 ${ownership} bg-surface p-2.5 shadow-sm outline-none transition hover:border-honey/60 hover:shadow focus-visible:ring-2 focus-visible:ring-honey ${isDragging ? 'relative z-10 cursor-grabbing opacity-80 shadow-lg' : ''}`}
     >
-       <div className="flex items-start justify-between gap-2"><p className="truncate text-xs font-semibold text-ink">{deal.title}</p><span className="shrink-0 text-[10px] text-muted">{date(deal.createdAt)}</span></div>
-       {deal.contact && <p className="mt-1 truncate text-[11px] text-muted">♙ {deal.contact.name}{deal.contact.phone ? ` · ${deal.contact.phone}` : ''}</p>}
-       <p className="mt-1 text-xs text-ink">{money(deal.value, deal.currency)}</p>
-       <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-muted">
+      <div className="flex items-start justify-between gap-2">
+        <button type="button" {...keepFromDrag} onClick={(e) => { e.stopPropagation(); actions.onOpen(deal.id); }} className="min-w-0 truncate text-left text-xs font-semibold text-ink hover:underline">{deal.title}</button>
+        <span className="shrink-0 text-[10px] text-muted">{date(deal.createdAt)}</span>
+      </div>
+      {deal.contact && <p className="mt-1 flex items-center gap-1 truncate text-[11px] text-muted"><UsersIcon size={12} /> <span className="truncate">{deal.contact.name}{deal.contact.phone ? ` · ${deal.contact.phone}` : ''}</span></p>}
+      <div className="mt-1.5 flex items-center justify-between gap-2">
+        <p className="text-sm font-semibold text-ink">{money(deal.value, deal.currency)}</p>
+        {stalled >= 3 && <span title="Días en esta etapa" className="inline-flex items-center gap-0.5 rounded bg-honey-soft px-1.5 py-0.5 text-[10px] text-ink"><ClockIcon size={11} /> {stalled} d</span>}
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-muted">
         {deal.source && <span className="rounded bg-canvas px-1.5 py-0.5">{deal.source}</span>}
-         <span>{deal.owner?.name ?? (actions.poolOn ? 'En el pool' : 'Sin responsable')}</span>
-         <span className="ml-auto flex gap-1">
-           {actions.poolOn && inPool && (
-             <button type="button" {...keepFromDrag} onClick={() => actions.onClaim(deal.id)} disabled={actions.claiming === deal.id}
-               className="rounded-md bg-honey px-2 py-0.5 text-[10px] font-semibold text-ink disabled:opacity-60">
-               {actions.claiming === deal.id ? 'Tomando…' : 'Tomar'}
-             </button>
-           )}
-           <button type="button" {...keepFromDrag} onClick={() => actions.onInsights(deal)} aria-label={`Resumen IA de ${deal.title}`} title="Resumen del cliente, qué responder y próximo paso"
-             className="rounded-md border border-line px-1.5 py-0.5 text-[10px] text-ink hover:bg-honey-soft">
-             ✦ IA
-           </button>
-         </span>
+        <span className="truncate">{deal.owner?.name ?? (actions.poolOn ? 'En el pool' : 'Sin responsable')}</span>
+        <span className="ml-auto flex gap-1">
+          {actions.poolOn && inPool && (
+            <button type="button" {...keepFromDrag} onClick={(e) => { e.stopPropagation(); actions.onClaim(deal.id); }} disabled={actions.claiming === deal.id}
+              className="rounded-md bg-honey px-2 py-0.5 text-[10px] font-semibold text-on-honey disabled:opacity-60">
+              {actions.claiming === deal.id ? 'Tomando…' : 'Tomar'}
+            </button>
+          )}
+          <button type="button" {...keepFromDrag} onClick={(e) => { e.stopPropagation(); actions.onOpen(deal.id, 'ia'); }} aria-label={`Resumen IA de ${deal.title}`} title="Resumen del cliente, qué responder y próximo paso"
+            className="inline-flex items-center gap-0.5 rounded-md border border-line px-1.5 py-0.5 text-[10px] text-ink hover:bg-honey-soft">
+            <SparklesIcon size={11} /> IA
+          </button>
+        </span>
       </div>
     </li>
-  );
-}
-
-interface Insight { summary: string; temperature: 'frio' | 'tibio' | 'caliente'; nextStep: string; reply: string; savedAsNote: boolean }
-const TEMPERATURE: Record<Insight['temperature'], [string, BadgeTone]> = { frio: ['Frío', 'info'], tibio: ['Tibio', 'honey'], caliente: ['Caliente', 'danger'] };
-
-/** E05-S10 — "Resumen del cliente", "Qué responder" y "Próximo paso" con un clic, como en la referencia. */
-function InsightsDialog({ deal, onClose }: { deal: Card; onClose: () => void }) {
-  const [copied, setCopied] = useState(false);
-  const generate = useMutation({ mutationFn: () => api<Insight>(`/api/v1/deals/${deal.id}/insights`, { method: 'POST' }) });
-  // Una sola llamada al abrir (StrictMode monta dos veces en desarrollo): cada llamada cuesta y deja una nota.
-  const started = useRef(false);
-  useEffect(() => {
-    if (started.current) return;
-    started.current = true;
-    generate.mutate();
-  }, [generate]);
-
-  async function copy(text: string) {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      window.prompt('Copia la respuesta', text);
-    }
-  }
-
-  const error = generate.error instanceof ApiError ? generate.error : undefined;
-  return (
-    <div role="dialog" aria-modal="true" aria-label={`Resumen IA de ${deal.title}`} className="fixed inset-0 z-40 flex items-center justify-center overflow-y-auto bg-ink/60 p-4" onClick={onClose}>
-      <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-surface shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
-          <div className="min-w-0">
-            <h2 className="truncate text-base font-semibold text-ink">✦ {deal.title}</h2>
-            <p className="mt-1 text-xs text-muted">{deal.contact?.name ?? 'Sin cliente'} · resumen con IA</p>
-          </div>
-          <button type="button" onClick={onClose} aria-label="Cerrar" className="text-2xl leading-none text-muted hover:text-ink">×</button>
-        </div>
-        <div className="flex flex-col gap-4 p-5 text-sm">
-          {generate.isPending && <p className="text-xs text-muted">Leyendo la conversación y el negocio…</p>}
-          {generate.isError && (
-            <Alert>
-              {error?.message ?? 'No pudimos generar el resumen.'}
-              {error?.code === 'AI_NOT_CONFIGURED' && <> <Link to="/settings" search={{ tab: 'ia' }} className="underline">Ir a Asistente IA</Link></>}
-            </Alert>
-          )}
-          {generate.data && (
-            <>
-              <section>
-                <h3 className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-muted">
-                  Resumen del cliente <Badge tone={TEMPERATURE[generate.data.temperature][1]}>{TEMPERATURE[generate.data.temperature][0]}</Badge>
-                </h3>
-                <p className="mt-1 text-ink">{generate.data.summary}</p>
-              </section>
-              <section>
-                <h3 className="text-[10px] font-semibold uppercase tracking-wide text-muted">Próximo paso</h3>
-                <p className="mt-1 text-ink">{generate.data.nextStep}</p>
-              </section>
-              <section>
-                <h3 className="text-[10px] font-semibold uppercase tracking-wide text-muted">Qué responder</h3>
-                <p className="mt-1 rounded-lg bg-canvas px-3 py-2 text-ink">{generate.data.reply}</p>
-                <button type="button" onClick={() => copy(generate.data!.reply)} className={`${secondaryButton} mt-2`}>{copied ? 'Copiado' : 'Copiar respuesta'}</button>
-              </section>
-              <p className="text-[11px] text-muted">
-                {generate.data.savedAsNote ? 'Quedó como nota interna en la conversación del cliente.' : 'Este negocio no tiene conversación: el resumen no se guardó.'} Revísalo antes de usarlo: la IA puede equivocarse.
-              </p>
-            </>
-          )}
-          <div className="flex justify-end gap-2 border-t border-line pt-4">
-            <button type="button" onClick={() => generate.mutate()} disabled={generate.isPending} className={secondaryButton}>Generar de nuevo</button>
-            <button type="button" onClick={onClose} className={secondaryButton}>Cerrar</button>
-          </div>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -333,7 +276,7 @@ function QuickDeal({ pipelineId, stageId, stageName, onDone, onCancel }: { pipel
     });
   }
   return (
-    <div role="dialog" aria-modal="true" aria-label="Nuevo negocio" className="fixed inset-0 z-40 flex items-center justify-center overflow-y-auto bg-ink/60 p-4" onClick={onCancel}>
+    <div role="dialog" aria-modal="true" aria-label="Nuevo negocio" className="fixed inset-0 z-40 flex items-center justify-center overflow-y-auto bg-scrim/60 p-4" onClick={onCancel}>
       <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-[42rem] flex-col overflow-hidden rounded-2xl bg-surface shadow-2xl" onClick={(event) => event.stopPropagation()}>
         <div className="flex shrink-0 items-start justify-between border-b border-line px-6 py-5"><div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-lg bg-honey-soft text-xl text-ink">ϟ</span><div><h2 className="text-lg font-semibold text-ink">Nuevo negocio</h2><p className="text-xs text-muted">Etapa: {stageName}</p></div></div><button type="button" onClick={onCancel} aria-label="Cerrar" className="text-2xl leading-none text-muted hover:text-ink">×</button></div>
          <form onSubmit={onSubmit} className="min-h-0 grid gap-0 overflow-y-auto">
@@ -349,7 +292,7 @@ function QuickDeal({ pipelineId, stageId, stageName, onDone, onCancel }: { pipel
   );
 }
 
-function DealList({ pipelineId, filters }: { pipelineId: string; filters: Filters }) {
+function DealList({ pipelineId, filters, onOpen }: { pipelineId: string; filters: Filters; onOpen: (dealId: string) => void }) {
   const { money, date } = useRegion();
   const params = new URLSearchParams({ pipelineId, ...filterParams(filters) });
   const list = useQuery({ queryKey: ['deal-list', pipelineId, filters.q, filters.mine, filters.pool], queryFn: () => api<{ items: Card[] }>(`/api/v1/deals?${params}`) });
@@ -364,8 +307,8 @@ function DealList({ pipelineId, filters }: { pipelineId: string; filters: Filter
         </thead>
         <tbody className="divide-y divide-line">
           {list.data.items.map((d) => (
-            <tr key={d.id}>
-              <td className="px-3 py-2 font-medium text-ink">{d.title}</td>
+            <tr key={d.id} onClick={() => onOpen(d.id)} className="cursor-pointer transition hover:bg-canvas">
+              <td className="px-3 py-2 font-medium text-ink"><button type="button" onClick={(e) => { e.stopPropagation(); onOpen(d.id); }} className="text-left hover:underline">{d.title}</button></td>
               <td className="px-3 py-2 text-ink">{d.contact?.name ?? 'Sin cliente'}</td>
               <td className="px-3 py-2 text-ink">{d.stage?.name}</td>
               <td className="px-3 py-2 text-ink">{money(d.value, d.currency)}</td>
@@ -412,6 +355,7 @@ function StageSettings({ pipeline }: { pipeline: Pipeline }) {
         <Button type="submit" loading={call.isPending}>Agregar columna</Button>
       </form>
       {call.isError && <div className="mt-3"><Alert>{call.error instanceof ApiError ? (call.error.status === 403 ? 'Solo propietarios y administradores configuran el embudo.' : call.error.message) : 'No se pudo guardar.'}</Alert></div>}
+      <RobotsPanel pipelineId={pipeline.id} stages={pipeline.stages} />
     </section>
   );
 }

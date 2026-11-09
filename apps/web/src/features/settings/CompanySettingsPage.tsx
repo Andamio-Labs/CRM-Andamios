@@ -67,7 +67,7 @@ export function CompanySettingsPage() {
               to="/settings"
               search={{ tab: t.id }}
               aria-current={t.id === tab ? 'page' : undefined}
-              className={`flex min-h-10 shrink-0 items-center gap-2 rounded-lg px-3 text-xs ${t.id === tab ? 'bg-honey font-semibold text-ink' : 'text-muted hover:bg-canvas hover:text-ink'}`}
+              className={`flex min-h-10 shrink-0 items-center gap-2 rounded-lg px-3 text-xs ${t.id === tab ? 'bg-honey font-semibold text-on-honey' : 'text-muted hover:bg-canvas hover:text-ink'}`}
             >
               <span aria-hidden className="w-4 text-center">{t.icon}</span>{t.label}
             </Link>
