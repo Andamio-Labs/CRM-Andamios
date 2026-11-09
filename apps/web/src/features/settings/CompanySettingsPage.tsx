@@ -23,6 +23,7 @@ interface Settings {
   locale: string;
   businessHours: Record<Day, { from: string; to: string }[]>;
   sellersSeeOnlyAssigned: boolean;
+  leadPool: boolean;
   outOfHoursEnabled: boolean;
   outOfHoursMessage: string;
 }
@@ -123,6 +124,7 @@ function SettingsForm({ initial, saving, result, onSave }: {
       locale: String(form.get('locale')),
       businessHours: hours,
       sellersSeeOnlyAssigned: form.get('sellersSeeOnlyAssigned') === 'on',
+      leadPool: form.get('leadPool') === 'on',
       outOfHoursEnabled: form.get('outOfHoursEnabled') === 'on',
       outOfHoursMessage: String(form.get('outOfHoursMessage') ?? initial.outOfHoursMessage),
     });
@@ -187,6 +189,14 @@ function SettingsForm({ initial, saving, result, onSave }: {
         <span>
           <span className="block text-xs font-semibold text-ink">Cada vendedor ve solo lo suyo</span>
           <span className="block text-xs text-muted">Los vendedores solo verán los contactos, negocios y conversaciones que tengan asignados. Propietarios y administradores siempre ven todo.</span>
+        </span>
+      </label>
+
+      <label className="flex items-start gap-3 rounded-lg border border-line p-3">
+        <input type="checkbox" name="leadPool" defaultChecked={initial.leadPool} className="mt-1 size-4 accent-honey" />
+        <span>
+          <span className="block text-xs font-semibold text-ink">Pool compartido de leads</span>
+          <span className="block text-xs text-muted">Los leads nuevos no se reparten por turnos: avisamos a los vendedores disponibles y el primero que lo toma se queda con él, con su cliente y su conversación. Con "cada vendedor ve solo lo suyo", también ven los leads sin dueño para poder tomarlos.</span>
         </span>
       </label>
 

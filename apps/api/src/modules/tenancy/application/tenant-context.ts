@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { eq, sql } from 'drizzle-orm';
+import { eq, isNull, or, sql } from 'drizzle-orm';
 import type { Database, Transaction } from '../../../shared/database/database.js';
 import { tenantSettings } from '../../../shared/database/schema.js';
 import { withTenant } from '../../../shared/database/with-tenant.js';
@@ -31,9 +31,15 @@ export class TenantContext {
     return recordVisibility(auth.role, await this.settings(tx));
   }
 
-  /** Condición SQL de visibilidad para una columna owner_id, o undefined si ve todo. */
+  /**
+   * Condición SQL de visibilidad para una columna owner_id, o undefined si ve todo.
+   * E03-S08 — Con el pool de leads activo, el vendedor también ve lo que no tiene dueño, para poder tomarlo.
+   */
   async visibilityFilter(tx: Transaction, auth: AuthContext, ownerColumn: Parameters<typeof eq>[0]) {
-    return (await this.visibility(tx, auth)) === 'assigned' ? eq(ownerColumn, auth.userId) : undefined;
+    if (auth.role !== 'member') return undefined;
+    const settings = await this.settings(tx);
+    if (recordVisibility(auth.role, settings) !== 'assigned') return undefined;
+    return settings.leadPool ? or(eq(ownerColumn, auth.userId), isNull(ownerColumn)) : eq(ownerColumn, auth.userId);
   }
 
   /** Un responsable debe ser miembro del tenant (las FK a "user" no lo garantizan). */

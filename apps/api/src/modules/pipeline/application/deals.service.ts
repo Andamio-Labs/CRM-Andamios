@@ -1,8 +1,8 @@
 import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
-import { and, asc, desc, eq, gt, max, min, ne, or, type SQL, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, isNull, max, min, ne, or, type SQL, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Transaction } from '../../../shared/database/database.js';
-import { closeReasons, companies, contacts, dealEvents, deals, stages, user } from '../../../shared/database/schema.js';
+import { closeReasons, companies, contacts, conversations, dealEvents, deals, stages, user } from '../../../shared/database/schema.js';
 import { AppError } from '../../../shared/http/app-error.js';
 import { badRequest } from '../../../shared/http/errors.js';
 import { ContactsService } from '../../contacts/application/contacts.service.js';
@@ -38,8 +38,8 @@ export const createDealSchema = z
   .strict();
 export const updateDealSchema = z.object(dealFields).partial().strict();
 export const moveDealSchema = z.object({ stageId: z.uuid(), afterDealId: z.uuid().nullable().optional() }).strict();
-/** X-07 — Buscador y "mis leads" del tablero, y la vista lista. */
-export const boardQuerySchema = z.object({ q: z.string().trim().max(100).optional(), mine: z.stringbool().optional() });
+/** X-07 — Buscador y "mis leads" del tablero, y la vista lista. E03-S08: `pool` = solo los que no tienen dueño. */
+export const boardQuerySchema = z.object({ q: z.string().trim().max(100).optional(), mine: z.stringbool().optional(), pool: z.stringbool().optional() });
 export const listDealsSchema = boardQuerySchema.extend({
   pipelineId: z.uuid().optional(),
   status: z.enum(['open', 'won', 'lost', 'all']).default('open'),
@@ -136,8 +136,10 @@ export class DealsService {
       else if (afterDealId === null) position = await this.topOf(tx, stageId, id);
       else position = await this.between(tx, auth, stageId, afterDealId, id);
 
-      const [row] = await tx.update(deals).set({ stageId, position, updatedAt: sql`now()` }).where(eq(deals.id, id)).returning();
       stageChanged = current.stageId !== stageId;
+      const [row] = await tx.update(deals)
+        .set({ stageId, position, updatedAt: sql`now()`, ...(stageChanged ? { stageEnteredAt: sql`now()` } : {}) })
+        .where(eq(deals.id, id)).returning();
       if (stageChanged) await this.event(tx, auth, id, 'stage_changed', { from: current.stageId, to: stageId });
       return row!;
     });
@@ -178,6 +180,29 @@ export class DealsService {
     return view(deal);
   }
 
+  /**
+   * E03-S08 — Pool compartido: el primer vendedor que toma el lead se queda con él, con su cliente y su
+   * conversación. El UPDATE condicionado decide la carrera: el segundo recibe 409.
+   */
+  async claim(auth: AuthContext, id: string) {
+    const deal = await this.tenant.run(auth, async (tx) => {
+      if (!(await this.tenant.settings(tx)).leadPool) throw new AppError(HttpStatus.CONFLICT, 'LEAD_POOL_DISABLED', 'El pool de leads no está activo.');
+      const current = await this.findVisible(tx, auth, id);
+      const [row] = await tx.update(deals).set({ ownerId: auth.userId, updatedAt: sql`now()` })
+        .where(and(eq(deals.id, current.id), isNull(deals.ownerId), eq(deals.status, 'open'))).returning();
+      if (!row) throw new AppError(HttpStatus.CONFLICT, 'LEAD_ALREADY_TAKEN', 'Otro vendedor ya tomó este lead.');
+      if (row.contactId) {
+        await tx.update(contacts).set({ ownerId: auth.userId, updatedAt: sql`now()` }).where(and(eq(contacts.id, row.contactId), isNull(contacts.ownerId)));
+        await tx.update(conversations).set({ assignedTo: auth.userId }).where(and(eq(conversations.contactId, row.contactId), isNull(conversations.assignedTo)));
+      }
+      await this.event(tx, auth, id, 'claimed', {});
+      return row;
+    });
+    // Sale del pool: sus vendedores dejan de verlo al recibir el evento.
+    this.publish('deal.updated', deal, true);
+    return view(deal);
+  }
+
   events(auth: AuthContext, id: string) {
     return this.tenant.run(auth, async (tx) => {
       await this.findVisible(tx, auth, id);
@@ -207,11 +232,11 @@ export class DealsService {
     });
   }
 
-  private async filters(tx: Transaction, auth: AuthContext, { q, mine }: z.infer<typeof boardQuerySchema>) {
+  private async filters(tx: Transaction, auth: AuthContext, { q, mine, pool }: z.infer<typeof boardQuerySchema>) {
     const search = q
       ? or(...[deals.title, deals.description, contacts.name, contacts.phone].map((col) => normalizedContains(sql`${col}`, q)))
       : undefined;
-    return and(await this.tenant.visibilityFilter(tx, auth, deals.ownerId), mine ? eq(deals.ownerId, auth.userId) : undefined, search);
+    return and(await this.tenant.visibilityFilter(tx, auth, deals.ownerId), mine ? eq(deals.ownerId, auth.userId) : undefined, pool ? isNull(deals.ownerId) : undefined, search);
   }
 
   /** Tarjeta completa: contacto, teléfono, responsable, origen, etapa y fecha (referencia, pantalla 4). */
@@ -288,10 +313,10 @@ export class DealsService {
     await tx.insert(dealEvents).values({ tenantId: auth.tenantId, dealId, type, data, actorId: auth.userId });
   }
 
-  /** Se emite DESPUÉS del commit: nadie ve en vivo un cambio que luego se revirtió. */
-  private publish(event: string, deal: DealRow) {
+  /** Se emite DESPUÉS del commit: nadie ve en vivo un cambio que luego se revirtió. Sin dueño, también va al pool. */
+  private publish(event: string, deal: DealRow, leftPool = false) {
     this.realtime.publish(deal.tenantId, event, {
       dealId: deal.id, pipelineId: deal.pipelineId, stageId: deal.stageId, position: deal.position, status: deal.status, ownerId: deal.ownerId,
-    }, deal.ownerId);
+    }, deal.ownerId, leftPool || deal.ownerId === null);
   }
 }

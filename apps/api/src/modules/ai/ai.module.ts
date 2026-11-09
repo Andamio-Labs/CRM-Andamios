@@ -19,6 +19,7 @@ import { AgentRuntime } from './application/agent-runtime.js';
 import { AgentService, previewSchema, updateAgentSchema } from './application/agent.service.js';
 import { AiLogsService, listInteractionsSchema } from './application/ai-logs.service.js';
 import { AiUsageService } from './application/ai-usage.service.js';
+import { InsightsService } from './application/insights.service.js';
 import { type AiReplyJob, AutoReplyService } from './application/auto-reply.service.js';
 import { type IndexJob, KnowledgeIndexer } from './application/knowledge-indexer.js';
 import { KnowledgeRetriever } from './application/knowledge-retriever.js';
@@ -86,12 +87,22 @@ class KnowledgeController {
   remove(@CurrentAuth() auth: AuthContext, @Param('id') id: string) { return this.knowledge.remove(auth, id); }
 }
 
+/** E05-S10 — Resumen del cliente desde el negocio. Guarda una nota interna: requiere poder escribir. */
+@Controller('v1/deals')
+@UseGuards(SessionGuard, PermissionGuard)
+class InsightsController {
+  constructor(private readonly insights: InsightsService) {}
+
+  @Post(':id/insights') @HttpCode(HttpStatus.OK) @RequirePermission('records:write')
+  forDeal(@CurrentAuth() auth: AuthContext, @Param('id') id: string) { return this.insights.forDeal(auth, id); }
+}
+
 /** E05 — Agente de IA en WhatsApp. Proveedor por configuración: Groq o DeepSeek (LLM) y un modelo local (embeddings). */
 @Module({
   imports: [IdentityModule, TenancyModule, ContactsModule, TasksModule],
-  controllers: [AiController, KnowledgeController],
+  controllers: [AiController, KnowledgeController, InsightsController],
   providers: [
-    AgentService, KnowledgeService, KnowledgeIndexer, KnowledgeRetriever, AgentRuntime, AutoReplyService, AiUsageService, AiLogsService,
+    AgentService, KnowledgeService, KnowledgeIndexer, KnowledgeRetriever, AgentRuntime, AutoReplyService, AiUsageService, AiLogsService, InsightsService,
     { provide: LLM_PROVIDER, inject: [ENV], useFactory: llmFromEnv },
     { provide: EMBEDDINGS_PROVIDER, inject: [ENV], useFactory: embeddingsFromEnv },
     { provide: PAGE_FETCHER, useValue: (url: string) => fetchPublicPage(url) },

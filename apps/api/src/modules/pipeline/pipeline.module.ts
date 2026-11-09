@@ -82,6 +82,9 @@ class DealsController {
   @Post(':id/close') @HttpCode(HttpStatus.OK) @RequirePermission('records:write')
   close(@CurrentAuth() auth: AuthContext, @Param('id') id: string, @ZodBody(closeDealSchema) body: Body<typeof closeDealSchema>) { return this.deals.close(auth, id, body); }
 
+  @Post(':id/claim') @HttpCode(HttpStatus.OK) @RequirePermission('records:write')
+  claim(@CurrentAuth() auth: AuthContext, @Param('id') id: string) { return this.deals.claim(auth, id); }
+
   @Post(':id/reopen') @HttpCode(HttpStatus.OK) @RequirePermission('records:write')
   reopen(@CurrentAuth() auth: AuthContext, @Param('id') id: string) { return this.deals.reopen(auth, id); }
 

@@ -46,6 +46,17 @@ describe('Tareas y recordatorios', () => {
       expect(await ids('assignment=unassigned')).not.toContain(overdue.id);
     });
 
+    it('calendario: tareas que vencen dentro del rango (E06-S04)', async () => {
+      const { api } = team.owner;
+      const inside = (await api.post('/api/v1/tasks', { title: 'Dentro del rango', dealId, dueAt: inMinutes(60 * 24 * 40) }).expect(201)).body;
+      const outside = (await api.post('/api/v1/tasks', { title: 'Fuera del rango', dealId, dueAt: inMinutes(60 * 24 * 50) }).expect(201)).body;
+      const from = encodeURIComponent(inMinutes(60 * 24 * 39));
+      const to = encodeURIComponent(inMinutes(60 * 24 * 41));
+      const found = (await api.get(`/api/v1/tasks?status=all&from=${from}&to=${to}`).expect(200)).body.map((x: { id: string }) => x.id);
+      expect(found).toContain(inside.id);
+      expect(found).not.toContain(outside.id);
+    });
+
     it('otra empresa no ve ni toca las tareas', async () => {
       const task = (await team.owner.api.post('/api/v1/tasks', { title: 'Privada', dealId }).expect(201)).body;
       const other = (await createTeam(t, 'Otra de tareas')).owner.api;

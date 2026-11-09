@@ -91,7 +91,8 @@ export class InboundService {
     });
 
     for (const job of jobs) await this.queue.enqueue(job.queue, job.name, job.data, { jobId: job.jobId, delayMs: job.delayMs });
-    for (const e of events) this.realtime.publish(tenantId, e.event, e.payload, e.ownerId);
+    // Un negocio nuevo sin dueño es del pool de leads (E03-S08): también lo ven sus vendedores.
+    for (const e of events) this.realtime.publish(tenantId, e.event, e.payload, e.ownerId, e.event === 'deal.created');
     for (const lead of leads) await this.domainEvents.emit({ type: 'lead.created', tenantId, ...lead });
   }
 

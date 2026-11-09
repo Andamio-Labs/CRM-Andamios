@@ -36,7 +36,8 @@ export class TenantSettingsController {
     await withTenant(this.db, auth.tenantId, (tx) =>
       tx.update(tenantSettings).set({ ...changes, updatedAt: sql`now()` }).where(eq(tenantSettings.tenantId, auth.tenantId)),
     );
-    if (changes.sellersSeeOnlyAssigned !== undefined) this.realtime.disconnectSellers(auth.tenantId); // auditoría #2
+    // Auditoría #2: cambia lo que ven los vendedores (y, con el pool, a qué sala del tiempo real entran).
+    if (changes.sellersSeeOnlyAssigned !== undefined || changes.leadPool !== undefined) this.realtime.disconnectSellers(auth.tenantId);
     return this.findOrFail(auth.tenantId);
   }
 
