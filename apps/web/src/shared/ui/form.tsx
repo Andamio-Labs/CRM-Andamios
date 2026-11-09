@@ -28,7 +28,7 @@ export function Button({ children, loading, className, ...props }: ButtonHTMLAtt
   return (
     <button
       disabled={loading || props.disabled}
-      className={`h-11 rounded-lg bg-honey px-4 font-semibold text-ink transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-honey focus-visible:ring-offset-2 focus-visible:ring-offset-auth-panel active:scale-[0.98] disabled:opacity-60 ${className ?? ''}`}
+      className={`h-11 rounded-lg bg-honey px-4 font-semibold text-on-honey transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-honey focus-visible:ring-offset-2 focus-visible:ring-offset-auth-panel active:scale-[0.98] disabled:opacity-60 ${className ?? ''}`}
       {...props}
     >
       {loading ? 'Un momento…' : children}

@@ -80,7 +80,7 @@ export function InboxPage() {
               role="tab"
               aria-selected={filter === key}
               onClick={() => setFilter(key)}
-              className={`min-h-11 shrink-0 rounded-lg px-3 text-sm ${filter === key ? 'bg-honey font-semibold text-ink' : 'bg-surface text-muted'}`}
+              className={`min-h-11 shrink-0 rounded-lg px-3 text-sm ${filter === key ? 'bg-honey font-semibold text-on-honey' : 'bg-surface text-muted'}`}
             >
               {label}{count ? ` (${count})` : ''}
             </button>
@@ -106,7 +106,7 @@ export function InboxPage() {
                     <span className="block truncate text-sm text-muted">{c.contact.phone}</span>
                   </span>
                   {aiPauseState(c).paused && c.aiPauseReason !== 'human_reply' && <Badge tone={c.aiPauseReason === 'manual' ? 'neutral' : 'honey'}>{c.aiPauseReason === 'manual' ? 'IA en pausa' : 'Te necesita'}</Badge>}
-                  {c.unreadCount > 0 && <span className="rounded-full bg-honey px-2 py-0.5 text-xs font-semibold text-ink" aria-label={`${c.unreadCount} sin leer`}>{c.unreadCount}</span>}
+                  {c.unreadCount > 0 && <span className="rounded-full bg-honey px-2 py-0.5 text-xs font-semibold text-on-honey" aria-label={`${c.unreadCount} sin leer`}>{c.unreadCount}</span>}
                 </button>
               </li>
             ))}
